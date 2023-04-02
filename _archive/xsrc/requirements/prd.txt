@@ -1,0 +1,15 @@
+fastapi[all]==0.92.0 # From none | Vulnerbilities: None
+sqlalchemy==2.0.4 # From none | Vulnerbilities: None
+alembic==1.9.4 # From none | Vulnerbilities: None
+aiofiles==23.1.0 # From 22.1.0 | Vulnerbilities: None
+aiosqlite==0.18.0 # Vulnerbilities: None
+asyncpg==0.27.0 # Vulnerbilities: None
+devsetgo-lib==0.10.0 # Vulnerbilities: None
+gunicorn==20.1.0 # Vulnerbilities: None
+pydantic==1.10.5 # From 1.10.4 | Vulnerbilities: None
+python-dotenv==1.0.0 # From 0.21.0 | Vulnerbilities: None
+silly==1.1.0 # Vulnerbilities: None
+starlette-prometheus==0.9.0 # Vulnerbilities: None
+tqdm==4.64.1 # Vulnerbilities: None
+Starlette-WTF==0.4.3 # Vulnerbilities: None
+safe==0.4 # Vulnerbilities: None
