@@ -42,7 +42,8 @@
 				"ecmel.vscode-html-css",
 				"dbaeumer.vscode-eslint",
 				"genieai.chatgpt-vscode",
-				"ms-vscode.makefile-tools"
+				"ms-vscode.makefile-tools",
+				"ms-python.pylint"
 			]
 		}
 	},
