@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from typing import Any
-from typing import Dict
-
-from fastapi import FastAPI
-from service.settings import config_settings
-from service.app_routes import add_routes
+from typing import Any, Dict
 
 from dsg_lib import logging_config
+from fastapi import FastAPI
+
+from src.service.app_routes import add_routes
+from src.service.settings import config_settings
 
 logging_config.config_log(
     logging_directory=config_settings.logging_directory,
@@ -35,9 +34,8 @@ app = FastAPI(
     description=config_settings.app_description,
     version=config_settings.app_version,
     openapi_url="/openapi.json",
-    docs_url="/docs"
+    docs_url="/docs",
 )
 
-from service.app_routes import add_routes
 
 add_routes(app=app)

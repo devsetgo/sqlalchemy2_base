@@ -9,20 +9,22 @@ Example usage:
 
     >>> from config import get_settings
     >>> settings = get_settings()
-    
+
 """
 
-import secrets  # A Python library used for generating secure random numbers
-from functools import lru_cache
 import logging  # A Python library used for logging messages
+import secrets  # A Python library used for generating secure random numbers
+from datetime import datetime  # A Python library used for working with dates and times
+from functools import lru_cache
+
 from pydantic import (
     BaseSettings,
 )  # A library for data validation and settings management
-from datetime import datetime  # A Python library used for working with dates and times
 
 
 class Settings(BaseSettings):
     """
+    Note: When extending or modifying, the configuration endpoint will exclude anything that contains the words in the 'exclude_config' setting
     Class that defines the various configuration attributes required by the application.
 
     Attributes:
@@ -63,6 +65,15 @@ class Settings(BaseSettings):
 
     """
 
+    exclude_config: list = [
+        "pwd",
+        "password",
+        "database_type",
+        "key",
+        "csrf",
+        "secret",
+        "username",
+    ]
     app_name: str = "Demo"
     app_version: str = "1.0.0"
     app_description: str = "This is what the app is for."

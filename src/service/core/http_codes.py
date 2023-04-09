@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 # Python code to define a dictionary of HTTP error codes and their respective descriptions.
 # -*- coding: utf-8 -*-
 """
 Dictionary of HTTP error codes and their descriptions based on the HTTP/1.1 specification.
 The dictionary provides a mapping between HTTP error codes and their description strings.
 
-Use example: 
+Use example:
 - `http_codes` can be used to define or handle custom error responses for an API,
 - GET_CODES, POST_CODES, PUT_CODES, PATCH_CODES, and DELETE_CODES can be used to define HTTP error codes commonly encountered with each type of request method in an API.
 """
@@ -154,4 +155,10 @@ DELETE_CODES = {
     429: http_codes[429],
     500: http_codes[500],
     503: http_codes[503],
+}
+
+SYSTEM_INFO_CODE = {
+    200: http_codes[200],
+    409: http_codes[409],
+    500: http_codes[500],
 }

@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
-import datetime
+from datetime import datetime, timedelta
+from typing import Optional
 
 from cpuinfo import get_cpu_info
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import ORJSONResponse
 from loguru import logger
-from starlette_prometheus import metrics, PrometheusMiddleware
+from pydantic import BaseModel
+from starlette_prometheus import PrometheusMiddleware, metrics
 
-from service.core.process_checks import get_processes
-from service.settings import config_settings
+from src.service.core.http_codes import SYSTEM_INFO_CODE
+from src.service.core.process_checks import get_processes
+from src.service.settings import config_settings
 
 router = APIRouter()
 
@@ -18,38 +21,113 @@ router = APIRouter()
 router.add_route("/metrics", metrics)
 
 
-@router.get("/status", tags=["system-health"], response_class=ORJSONResponse)
-async def health_main() -> dict:
+class HealthCheckResponseModel(BaseModel):
     """
-    GET status, uptime, and current datetime
+    Health check response model to represent the system's status, uptime, and current datetime.
+
+    Attributes:
+        status (str): The status of the system.
+        uptime (timedelta): The duration since the system started running.
+        current_datetime (str): The current date and time on the system.
+
+    """
+
+    status: str
+    uptime: timedelta
+    current_datetime: str
+
+    class Config:
+        """
+        Configuration for the health check response model.
+        """
+
+        # Example schema to help understand the expected format of data
+        schema_extra = {
+            "example": {
+                "status": "UP",
+                "uptime": "1 days, 5 hours, 23 minutes, 45 seconds",
+                "current_datetime": "2022-06-30 15:43:10.123456",
+            }
+        }
+
+
+@router.get("/status", tags=["system-health"], response_model=HealthCheckResponseModel)
+async def health_main() -> Optional[HealthCheckResponseModel]:
+    """
+    GET status, uptime, and current datetime.
+
     Returns:
-        dict -- [status: UP, uptime: seconds current_datetime: datetime.now]
+        dict: A dictionary containing the status, uptime, and current datetime of the system.
+
+    Example:
+
+        {
+            "status": "UP",
+            "uptime": "1 days, 5 hours, 23 minutes, 45 seconds",
+            "current_datetime": "2022-06-30 15:43:10.123456"
+        }
+
     """
-    result: dict = {"status": "UP"}
-    return result
+    try:
+        # Calculate uptime by subtracting the start time from the current time
+        uptime = datetime.now() - config_settings.date_run
+
+        # Convert uptime to timedelta object for better representation
+        uptime_value = timedelta(seconds=int(uptime.total_seconds()))
+
+        # Get the current datetime on the system
+        current_datetime = datetime.now().isoformat(timespec="microseconds")
+
+        # Define a log message with the relevant information
+        log_message = f"Health check succeeded. Uptime: {uptime_value}, Current datetime: {current_datetime}"
+
+        # Log the message at the INFO level
+        logger.info(log_message)
+
+        # Return the status, uptime, and current datetime in a dictionary format
+        return {
+            "status": "UP",
+            "uptime": uptime_value,
+            "current_datetime": current_datetime,
+        }
+
+    except Exception as ex:
+        # Define an error message with the relevant information
+        error_message = f"Health check failed with error: {ex}"
+
+        # Log the message at the ERROR level
+        logger.error(error_message)
+
+        # Raise an HTTPException with status code 500 and detail message
+        raise HTTPException(
+            status_code=500, detail="Health check failed. Please try again later."
+        )
 
 
-@router.get("/system-info", tags=["system-health"])
+@router.get("/system-info", responses=SYSTEM_INFO_CODE, tags=["system-health"])
 async def health_status() -> dict:
     """
-    GET Request for CPU and process data
-    Returns:
-        dict -- [current_datetime: datetime.now, system information:
-        Python and System Information]
+    GET Request for CPU and process data.
+
+    Returns a dictionary containing the current datetime and system information.
+    The "system_info" key contains information about the system's CPU usage.
     """
 
     try:
         system_info = get_cpu_info()
-        result: dict = {
-            "current_datetime": str(datetime.datetime.now()),
+        current_datetime = datetime.now().isoformat(timespec="microseconds")
+        result = {
+            "current_datetime": current_datetime,
             "system_info": system_info,
         }
-        logger.info("GET system info")
+        # Log a message with the returned result at the DEBUG level
+        logger.debug(f"Returned system info: {result}")
         return result
-        # TODO: make more specific Exception
-        # BODY: Exception is generic and should be more specific or removed.
-    except Exception as e:
-        logger.error(f"Error: {e}")
+
+    except Exception as ex:
+        # Log an error message if an exception is raised
+        logger.error(f"Error retrieving CPU information: {ex}")
+        raise HTTPException(status_code=409, detail="Error retrieving CPU information.")
 
 
 @router.get("/processes", tags=["system-health"])
@@ -61,44 +139,65 @@ async def health_processes() -> dict:
     """
     try:
         system_info = get_processes()
+        current_datetime = datetime.now().isoformat(timespec="microseconds")
         result: dict = {
-            "current_datetime": str(datetime.datetime.now()),
+            "current_datetime": current_datetime,
             # "note": "this is filter to only return, python, gunicorn,
             # uvicorn, hypercorn, and daphne pids for security",
             "running_processes": system_info,
         }
-        logger.info("GET processes")
+        # Log a message with the returned result at the DEBUG level
+        logger.debug(f"Returned running processes: {result}")
         return result
-    except Exception as e:
-        logger.error(f"Error: {e}")
+    except Exception as ex:
+        # Log an error message if an exception is raised
+        logger.error(f"Error retrieving running processes: {ex}")
+        raise HTTPException(
+            status_code=409, detail="Error retrieving running processes."
+        )
 
 
-@router.get("/configuration")
+@router.get("/configuration", responses=SYSTEM_INFO_CODE)
 async def configuration():
     """
     API information endpoint
+    This function is used to retrieve API information like app version, environment running in (dev/prd),
+    Doc/Redoc link, License information, and support information.
     Returns:
         [json] -- [description] app version, environment running in (dev/prd),
         Doc/Redoc link, Lincense information, and support information
     """
-    configuration: dict = config_settings.dict()
+    try:
+        # Retrieve configuration settings from a dictionary
+        configuration: dict = config_settings.dict()
 
-    # remove sensitive data
-    exclude_config: list = [
-        "pwd",
-        "password",
-        "database_type",
-        "key",
-        "csrf",
-        "secret",
-        "username",
-    ]
-    logger.debug(f"excluding {exclude_config}")
-    for e in exclude_config:
-        if e in exclude_config:
-            configuration.pop(e)
+        # Remove sensitive data from the configuration dictionary using the pop() method.
+        # These keys will be removed from the dictionary if they exist, otherwise nothing happens.
+        key_exclude = config_settings.exclude_config
+        key_exclude.append("exclude")
 
-    result = {
-        "configuraton": configuration,
-    }
-    return result
+        for (
+            key
+        ) in (
+            configuration.copy()
+        ):  # iterate over a copy of the original keys so we can safely mutate the dictionary
+            for exclude_word in key_exclude:
+                if exclude_word in key:
+                    configuration.pop(key, None)
+                    break  # move on to the next key if an excluded word is found for this key
+
+        # Create a dictionary with the resulting configuration data
+        result = {
+            "configuration": configuration,
+        }
+
+        # Log a message with the returned result at the INFO level
+        logger.info("Completed configuration request.")
+
+        # Return the resulting dictionary as JSON
+        return result
+
+    except Exception as ex:
+        # If an exception is raised, log an error message and raise an HTTPException with status 409.
+        logger.error(f"Error retrieving configuration: {ex}")
+        raise HTTPException(status_code=409, detail="Error retrieving configuration.")

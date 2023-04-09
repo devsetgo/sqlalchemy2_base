@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 from database import db
 from fastapi import FastAPI
 from dsg_lib.logging_config import config_log
+
 
 def init_app():
     config_log(logging_level="DEBUG")
@@ -14,7 +16,6 @@ def init_app():
 
     @app.on_event("startup")
     async def startup():
-
         await db.create_all()
 
     @app.on_event("shutdown")

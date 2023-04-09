@@ -53,7 +53,7 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "pip install --user -r requirements.txt",
 	"postCreateCommand": "pip3 install --upgrade pip setuptools wheel",
-	"postCreateCommand": "pip3 install -r src/service/requirements/dev.txt --use-deprecated=legacy-resolver",
+	"postCreateCommand": "pip3 install -r src/requirements/dev.txt --use-deprecated=legacy-resolver",
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode"
 }

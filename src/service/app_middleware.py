@@ -2,11 +2,11 @@
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from loguru import logger
+from settings import config_settings
 from starlette.middleware.sessions import SessionMiddleware
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from service.core.custom_middleware import LoggerMiddleware
-from settings import config_settings
 
 
 def add_middleware(app):
