@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-
-
 from dsg_lib import logging_config
 from fastapi import FastAPI
-
+from service import resources
 from service.app_routes import add_routes
 from service.settings import config_settings
 
@@ -26,6 +24,9 @@ app = FastAPI(
     version=config_settings.app_version,
     openapi_url="/openapi.json",
     docs_url="/docs",
+    on_startup=[resources.startup_events],
+    on_shutdown=[resources.shutdown_events],
+
 )
 
 # Add routes to the app instance
