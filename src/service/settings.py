@@ -15,11 +15,19 @@ Example usage:
 import logging  # A Python library used for logging messages
 import secrets  # A Python library used for generating secure random numbers
 from datetime import datetime  # A Python library used for working with dates and times
+from enum import Enum
 from functools import lru_cache
 
 from pydantic import (
-    BaseSettings,
-)  # A library for data validation and settings management
+    BaseSettings,  # A library for data validation and settings management
+)
+
+
+class DatabaseDriverEnum(str, Enum):  # creating an Enum class
+    postgres = "postgresql+asyncpg"
+    sqlite = "sqlite+aiosqlite"
+    mysql = "mysql+aiomysql"
+    oracle = "oracle+cx_oracle"
 
 
 class Settings(BaseSettings):
@@ -92,12 +100,12 @@ class Settings(BaseSettings):
     prometheus_on: bool = True
 
     # Define database connection attributes
-    database_driver: str = "sqlite"
+    database_driver: DatabaseDriverEnum = DatabaseDriverEnum.sqlite
     db_username: str = "test"
     db_password: str = "test"
     db_location: str = "localhost"
     db_name: str = "api"
-
+    sqlite_memory: bool = False
     # Logging settings
     logging_directory: str = "log"
     log_name: str = "log.json"
@@ -149,6 +157,7 @@ def get_settings():
     Returns:
         Settings: A pydantic BaseSettings object containing the configuration values.
     """
+
     return Settings()  # Create an instance of the Settings class and return it
 
 

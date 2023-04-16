@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime, timedelta
-from typing import Optional
+import io
+import tracemalloc
+from datetime import date, datetime, timedelta
+from typing import Dict, List, Union
 
-from cpuinfo import get_cpu_info
-from fastapi import APIRouter, HTTPException
+from cpuinfo import get_cpu_info_json
+from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from pydantic import BaseModel
-from starlette_prometheus import PrometheusMiddleware, metrics
 
-from src.service.core.http_codes import SYSTEM_INFO_CODE
-from src.service.core.process_checks import get_processes
-from src.service.settings import config_settings
+from starlette_exporter import handle_metrics
+
+from service.core.http_codes import SYSTEM_INFO_CODE
+from service.core.process_checks import get_processes
+from service.settings import config_settings
 
 router = APIRouter()
 
-# TODO: detmine method to shutdown/restart python application
-# TODO: Determine method to get application uptime
-
-router.add_route("/metrics", metrics)
+router.add_route("/metrics", handle_metrics, include_in_schema=True)  # pragma: no cover
 
 
 class HealthCheckResponseModel(BaseModel):
@@ -44,15 +44,20 @@ class HealthCheckResponseModel(BaseModel):
         # Example schema to help understand the expected format of data
         schema_extra = {
             "example": {
-                "status": "UP",
+                "status": "up",
                 "uptime": "1 days, 5 hours, 23 minutes, 45 seconds",
                 "current_datetime": "2022-06-30 15:43:10.123456",
             }
         }
 
 
-@router.get("/status", tags=["system-health"], response_model=HealthCheckResponseModel)
-async def health_main() -> Optional[HealthCheckResponseModel]:
+@router.get(
+    "/status",
+    tags=["system-health"],
+    response_class=ORJSONResponse,
+    response_model=HealthCheckResponseModel,
+)
+async def health_main() -> HealthCheckResponseModel:
     """
     GET status, uptime, and current datetime.
 
@@ -69,14 +74,14 @@ async def health_main() -> Optional[HealthCheckResponseModel]:
 
     """
     try:
+        # Get the current datetime on the system
+        current_datetime = datetime.now().isoformat(timespec="microseconds")
+
         # Calculate uptime by subtracting the start time from the current time
         uptime = datetime.now() - config_settings.date_run
 
         # Convert uptime to timedelta object for better representation
         uptime_value = timedelta(seconds=int(uptime.total_seconds()))
-
-        # Get the current datetime on the system
-        current_datetime = datetime.now().isoformat(timespec="microseconds")
 
         # Define a log message with the relevant information
         log_message = f"Health check succeeded. Uptime: {uptime_value}, Current datetime: {current_datetime}"
@@ -86,78 +91,110 @@ async def health_main() -> Optional[HealthCheckResponseModel]:
 
         # Return the status, uptime, and current datetime in a dictionary format
         return {
-            "status": "UP",
+            "status": "up",
             "uptime": uptime_value,
             "current_datetime": current_datetime,
         }
-
-    except Exception as ex:
-        # Define an error message with the relevant information
-        error_message = f"Health check failed with error: {ex}"
-
-        # Log the message at the ERROR level
-        logger.error(error_message)
-
-        # Raise an HTTPException with status code 500 and detail message
-        raise HTTPException(
-            status_code=500, detail="Health check failed. Please try again later."
-        )
+    except Exception as ex:  # pragma: no cover
+        error: str = f"Error retriiving status: {ex}"
+        # Log an error message if an exception is raised
+        logger.error(error)
+        raise HTTPException(status_code=500, detail=error)
 
 
-@router.get("/system-info", responses=SYSTEM_INFO_CODE, tags=["system-health"])
-async def health_status() -> dict:
+@router.get("/system-info", response_class=ORJSONResponse, tags=["system-health"])
+def get_system_info() -> Dict[str, str]:
     """
     GET Request for CPU and process data.
 
     Returns a dictionary containing the current datetime and system information.
     The "system_info" key contains information about the system's CPU usage.
     """
-
     try:
-        system_info = get_cpu_info()
+        cpu_info = get_cpu_info_json()
         current_datetime = datetime.now().isoformat(timespec="microseconds")
-        result = {
-            "current_datetime": current_datetime,
-            "system_info": system_info,
-        }
+
+        result = {"current_datetime": current_datetime, "cpu_info": cpu_info}
+
         # Log a message with the returned result at the DEBUG level
         logger.debug(f"Returned system info: {result}")
+
         return result
 
-    except Exception as ex:
-        # Log an error message if an exception is raised
-        logger.error(f"Error retrieving CPU information: {ex}")
-        raise HTTPException(status_code=409, detail="Error retrieving CPU information.")
+    except Exception as ex:  # pragma: no cover
+        error: str = f"Error retrieving system info: {str(ex)}"
+        # Log an error message with the exception details at the ERROR level
+        logger.error(error)
+        raise HTTPException(status_code=500, detail=error)
 
 
-@router.get("/processes", tags=["system-health"])
-async def health_processes() -> dict:
+class Process(BaseModel):
+    pid: int
+    name: str
+    username: str
+
+
+class ProcessesResponse(BaseModel):
+    current_datetime: str
+    running_processes: List[Process]
+
+
+@router.get(
+    "/processes",
+    response_class=ORJSONResponse,
+    response_model=ProcessesResponse,
+    tags=["system-health"],
+)
+async def health_processes() -> ProcessesResponse:
     """
     GET running processes and filter by python processes
     Returns:
         dict -- [pid, name, username]
     """
     try:
-        system_info = get_processes()
+        running_processes = await get_processes()
         current_datetime = datetime.now().isoformat(timespec="microseconds")
-        result: dict = {
-            "current_datetime": current_datetime,
-            # "note": "this is filter to only return, python, gunicorn,
-            # uvicorn, hypercorn, and daphne pids for security",
-            "running_processes": system_info,
-        }
-        # Log a message with the returned result at the DEBUG level
+        result = ProcessesResponse(
+            current_datetime=current_datetime, running_processes=running_processes
+        )
         logger.debug(f"Returned running processes: {result}")
         return result
-    except Exception as ex:
-        # Log an error message if an exception is raised
-        logger.error(f"Error retrieving running processes: {ex}")
-        raise HTTPException(
-            status_code=409, detail="Error retrieving running processes."
-        )
+    except Exception as ex:  # pragma: no cover
+        logger.error(ex)
+        raise
 
 
-@router.get("/configuration", responses=SYSTEM_INFO_CODE)
+class ConfigurationResponse(BaseModel):
+    configuration: Dict[str, Union[List[str], str, date]]
+
+    class Config:
+        """
+        Configuration for the health check response model.
+        """
+
+        # Example schema to help understand the expected format of data
+        schema_extra = {
+            "example": {
+                "configuration": {
+                    "app_name": "Demo",
+                    "app_version": "1.0.0",
+                    "app_description": "This is what the app is for.",
+                    "release_env": "prd",
+                    "logging_directory": "log",
+                    "log_name": "log.json",
+                    "loguru_retention": "30 days",
+                    "loguru_rotation": "10 MB",
+                    "loguru_logging_level": "INFO",
+                    "loguru_log_backtrace": "True",
+                    "date_run": "2023-04-15",
+                }
+            }
+        }
+
+
+@router.get(
+    "/configuration", responses=SYSTEM_INFO_CODE, response_model=ConfigurationResponse
+)
 async def configuration():
     """
     API information endpoint
@@ -197,7 +234,27 @@ async def configuration():
         # Return the resulting dictionary as JSON
         return result
 
-    except Exception as ex:
+    except Exception as ex:  # pragma: no cover
+        error: str = f"Error retrieving configuration: {ex}"
         # If an exception is raised, log an error message and raise an HTTPException with status 409.
-        logger.error(f"Error retrieving configuration: {ex}")
-        raise HTTPException(status_code=409, detail="Error retrieving configuration.")
+        logger.error(error)
+        raise HTTPException(status_code=409, detail=error)
+
+
+@router.get("/heapdump")
+async def heapdump():
+    """
+    Retrieve a heap dump from the running application.
+
+    Returns:
+        A JSON object containing the heap dump.
+    """
+    tracemalloc.start()
+    snapshot = tracemalloc.take_snapshot()
+    buffer = io.StringIO()
+    stats = snapshot.statistics("lineno")
+    for stat in stats:
+        buffer.write(str(stat) + "\n")
+    heap_dump = buffer.getvalue().encode("utf-8")
+    # Return the heap dump as a JSON response
+    return Response(content=heap_dump, media_type="text/plain")

@@ -1,16 +1,16 @@
-aiofiles==23.1.0 # Vulnerabilities: None
-aiosqlite==0.18.0 # Vulnerabilities: None
-alembic==1.10.2 # From 1.9.4 | Vulnerabilities: None
-asyncpg==0.27.0 # Vulnerabilities: None
-devsetgo-lib==0.10.0 # Vulnerabilities: None
-fastapi[all]==0.95.0 # From 0.92.0 | Vulnerabilities: None
-gunicorn==20.1.0 # Vulnerabilities: None
-psutil==5.9.0
-py-cpuinfo==8.0.0
-pydantic==1.10.7 # From 1.10.5 | Vulnerabilities: None
-python-dotenv==1.0.0 # Vulnerabilities: None
-safe==0.4 # Vulnerabilities: None
-silly==1.1.0 # Vulnerabilities: None
-sqlalchemy==2.0.8 # From 2.0.4 | Vulnerabilities: None
-starlette-prometheus==0.9.0 # Vulnerabilities: None
-tqdm==4.65.0 # From 4.64.1 | Vulnerabilities: None
+aiofiles==23.1.0 # Vulnerbilities: None
+aiosqlite==0.18.0 # Vulnerbilities: None
+alembic==1.10.3 # From 1.10.2 | Vulnerbilities: None
+asyncpg==0.27.0 # Vulnerbilities: None
+devsetgo-lib==0.10.1 # From 0.10.0 | Vulnerbilities: None
+fastapi[all]==0.95.1 # From 0.95.0 | Vulnerbilities: None
+gunicorn==20.1.0 # Vulnerbilities: None
+psutil==5.9.4 # From 5.9.0 | Vulnerbilities: None
+py-cpuinfo==9.0.0 # From 8.0.0 | Vulnerbilities: None
+pydantic==1.10.7 # Vulnerbilities: None
+python-dotenv==1.0.0 # Vulnerbilities: None
+safe==0.4 # Vulnerbilities: None
+silly==1.1.0 # Vulnerbilities: None
+sqlalchemy==2.0.9 # From 2.0.8 | Vulnerbilities: None
+starlette_exporter
+tqdm==4.65.0 # Vulnerbilities: None

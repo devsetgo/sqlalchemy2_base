@@ -4,6 +4,7 @@ from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from loguru import logger
 from settings import config_settings
 from starlette.middleware.sessions import SessionMiddleware
+
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from service.core.custom_middleware import LoggerMiddleware
@@ -32,7 +33,13 @@ def add_middleware(app):
         )
 
     if config_settings.prometheus_on == True:
-        app.add_middleware(PrometheusMiddleware)
+        app.add_middleware(
+            PrometheusMiddleware,
+            app_name=config_settings.app_name,
+            prefix=config_settings.app_name,
+            group_paths=True,
+            buckets=[0.1, 0.25, 0.5],
+            skip_paths=["/metrics"],
+            always_use_int_status=False,
+        ),
         logger.info("prometheus middleware enabled")
-        app.add_route("/api/health/metrics", handle_metrics)
-        logger.info("prometheus route added")

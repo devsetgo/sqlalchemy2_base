@@ -1,15 +1,15 @@
 -r prd.txt
-autoflake==2.0.2 # From 2.0.0 | Vulnerbilities: None
-autopep8==2.0.2 # From 2.0.1 | Vulnerbilities: None
-black==23.3.0 # From 22.12.0 | Vulnerbilities: None
-# coverage==7.2.2 # From 7.0.4 | Vulnerbilities: None
+autoflake==2.0.2 # Vulnerbilities: None
+autopep8==2.0.2 # Vulnerbilities: None
+black==23.3.0 # Vulnerbilities: None
 coverage-badge==1.1.0 # Vulnerbilities: None
+coverage[toml]==7.2.3 # From 7.2.2 | Vulnerbilities: None
 flake8==6.0.0 # Vulnerbilities: None
 Graphviz==0.20.1 # Vulnerbilities: None
-pre-commit==3.2.1 # From 2.21.0 | Vulnerbilities: None
+pre-commit==3.2.2 # From 3.2.1 | Vulnerbilities: None
 pydot==1.4.2 # Vulnerbilities: None
-pylint==2.17.1 # From 2.15.9 | Vulnerbilities: None
-pytest==7.2.2 # From 7.2.0 | Vulnerbilities: None
+pylint==2.17.2 # From 2.17.1 | Vulnerbilities: None
+pytest==7.3.1 # From 7.2.2 | Vulnerbilities: None
 pytest-cov==4.0.0 # Vulnerbilities: None
 requests-mock==1.10.0 # Vulnerbilities: None
-scalene==1.5.20 # From 1.5.19 | Vulnerbilities: None
+scalene==1.5.20 # Vulnerbilities: None
