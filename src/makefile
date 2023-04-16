@@ -56,7 +56,7 @@ run-dev:
 
 # Run the application with Gunicorn
 run-prd:
-	gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
+	gunicorn service.main:app -w 4 -k uvicorn.workers.UvicornWorker
 
 # Clean up pycache and compiled Python files
 clean:

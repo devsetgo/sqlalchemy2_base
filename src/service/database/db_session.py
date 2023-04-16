@@ -3,7 +3,7 @@
 """
 This module creates an Enum class called DatabaseDriverEnum which lists the URLs for different types of databases. It then creates a declarative base for SQLAlchemy as per documentation.
 
-The `AsyncDatabaseSession` class in this module creates an async database session and has two methods: 
+The `AsyncDatabaseSession` class in this module creates an async database session and has two methods:
 
 1. init()
 2. create_all()

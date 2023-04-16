@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
+
+# Import necessary modules
 import io
 import tracemalloc
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Union
-
 from cpuinfo import get_cpu_info_json
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from pydantic import BaseModel
-
 from starlette_exporter import handle_metrics
 
+# Import custom modules
 from service.core.http_codes import SYSTEM_INFO_CODE
 from service.core.process_checks import get_processes
 from service.settings import config_settings
 
+# Create an instance of APIRouter
 router = APIRouter()
 
+# Add a route to handle /metrics endpoint
 router.add_route("/metrics", handle_metrics, include_in_schema=True)  # pragma: no cover
 
 
