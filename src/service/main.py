@@ -26,7 +26,6 @@ app = FastAPI(
     docs_url="/docs",
     on_startup=[resources.startup_events],
     on_shutdown=[resources.shutdown_events],
-
 )
 
 # Add routes to the app instance

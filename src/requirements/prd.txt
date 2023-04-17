@@ -1,16 +1,20 @@
 aiofiles==23.1.0 # Vulnerbilities: None
 aiosqlite==0.18.0 # Vulnerbilities: None
-alembic==1.10.3 # From 1.10.2 | Vulnerbilities: None
+alembic==1.10.3 # Vulnerbilities: None
 asyncpg==0.27.0 # Vulnerbilities: None
-devsetgo-lib==0.10.1 # From 0.10.0 | Vulnerbilities: None
-fastapi[all]==0.95.1 # From 0.95.0 | Vulnerbilities: None
+devsetgo-lib==0.10.1 # Vulnerbilities: None
+email-validator==2.0.0.post1 # From none | Vulnerbilities: None
+fastapi[all]==0.95.1 # Vulnerbilities: None
 gunicorn==20.1.0 # Vulnerbilities: None
-psutil==5.9.4 # From 5.9.0 | Vulnerbilities: None
-py-cpuinfo==9.0.0 # From 8.0.0 | Vulnerbilities: None
+passlib[bcrypt]==1.7.4 # Vulnerbilities: None
+psutil==5.9.4 # Vulnerbilities: None
+py-cpuinfo==9.0.0 # Vulnerbilities: None
 pydantic==1.10.7 # Vulnerbilities: None
+pyjwt[crypto]==2.6.0 # From none | Vulnerbilities: None
 python-dotenv==1.0.0 # Vulnerbilities: None
+python-multipart==0.0.6 # From none | Vulnerbilities: None
 safe==0.4 # Vulnerbilities: None
 silly==1.1.0 # Vulnerbilities: None
-sqlalchemy==2.0.9 # From 2.0.8 | Vulnerbilities: None
-starlette_exporter
+sqlalchemy==2.0.9 # Vulnerbilities: None
+starlette_exporter==0.15.1 # From none | Vulnerbilities: None
 tqdm==4.65.0 # Vulnerbilities: None

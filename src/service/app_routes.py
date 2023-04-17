@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from loguru import logger
 
 from service.api import health
+from service.api import user
 from service.core.http_codes import GET_CODES
 
 
@@ -30,6 +31,12 @@ def add_routes(app: FastAPI) -> None:
         return response
 
     # Add Routers Below Here
+    # user
+    app.include_router(
+        user.router,
+        prefix="/api/v1/user",
+        tags=["user"],
+    )
     # Health Router
     app.include_router(
         health.router,
@@ -37,5 +44,4 @@ def add_routes(app: FastAPI) -> None:
         tags=["system-health"],
     )
 
-    # user
     # auth

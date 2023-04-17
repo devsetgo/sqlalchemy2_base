@@ -20,8 +20,9 @@ from functools import lru_cache
 
 from pydantic import (
     BaseSettings,  # A library for data validation and settings management
-    validator,constr
-    )
+    validator,
+    constr,
+)
 
 
 class DatabaseDriverEnum(str, Enum):  # creating an Enum class
@@ -29,13 +30,14 @@ class DatabaseDriverEnum(str, Enum):  # creating an Enum class
     sqlite = "sqlite+aiosqlite"
     mysql = "mysql+aiomysql"
     oracle = "oracle+cx_oracle"
-    
+
     class Config:
         use_enum_values = True
 
+
 class Settings(BaseSettings):
     # database_driver: DatabaseDriverEnum = 'sqlite'
-    
+
     """
     Note: When extending or modifying, the configuration endpoint will exclude anything that contains the words in the 'exclude_config' setting
     Class that defines the various configuration attributes required by the application.
@@ -105,7 +107,7 @@ class Settings(BaseSettings):
     prometheus_on: bool = True
 
     # Define database connection attributes
-    database_driver: DatabaseDriverEnum = 'sqlite'
+    database_driver: DatabaseDriverEnum = "sqlite"
     db_username: str = "test"
     db_password: str = "test"
     db_location: str = "localhost"
@@ -146,10 +148,14 @@ class Settings(BaseSettings):
         '"',
         "`",
     ]
+    admin_first_name: str
+    admin_last_name: str
+    admin_email: str
+    admin_password: str
 
     date_run: datetime = datetime.utcnow()
 
-    @validator('database_driver', pre=True)
+    @validator("database_driver", pre=True)
     def parse_database_driver(cls, value):
         if isinstance(value, str):
             # Convert the input string to the corresponding enum member value

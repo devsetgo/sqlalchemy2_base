@@ -13,12 +13,11 @@ if db_driver == "sqlite+aiosqlite":
     if config_settings.sqlite_memory:
         db_config = f"{db_driver}:///:memory:"
     else:
-        db_config = f"{db_driver}:///sqlite_db/{config_settings.db_name}.db"
+        db_config = f"{db_driver}:///_sqlite_db/{config_settings.db_name}.db"
 else:
     db_config = f"{db_driver}://{config_settings.db_username}:{config_settings.db_password}@{config_settings.db_location}/{config_settings.db_name}"
 
 logger.debug(f"Database Driver Setting: {db_driver}")
-
 
 
 class AsyncDatabaseSession:
@@ -67,5 +66,6 @@ class AsyncDatabaseSession:
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created successfully.")
+
 
 db = AsyncDatabaseSession()

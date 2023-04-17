@@ -1,13 +1,18 @@
+# -*- coding: utf-8 -*-
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, String, desc, and_
 from sqlalchemy.future import select
+from service.database.db_session import db
 
 
 class BaseModel:
     id = Column(String, primary_key=True)
-    created_at = Column(DateTime, index=True, default=datetime.utcnow)
+    date_created = Column(DateTime, index=True, default=datetime.utcnow)
+    date_updated = Column(
+        DateTime, index=True, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     @classmethod
     async def create(cls, **kwargs):
@@ -24,8 +29,7 @@ class BaseModel:
     @classmethod
     async def update(cls, id, **kwargs):
         query = (
-            cls.__table__
-            .update()
+            cls.__table__.update()
             .where(cls.id == id)
             .values(**kwargs)
             .execution_options(synchronize_session="fetch")
@@ -47,8 +51,22 @@ class BaseModel:
         return instance
 
     @classmethod
-    async def get_all(cls):
+    async def get_all(cls, filters=None, order_by=None):
         query = select(cls)
+        if filters:
+            for key, value in filters.items():
+                if key == "date_created":
+                    query = query.where(cls.date_created >= value)
+                elif key == "date_updated":
+                    query = query.where(cls.date_updated >= value)
+                else:
+                    query = query.where(getattr(cls, key).like(f"%{value}%"))
+        if order_by:
+            column, direction = order_by.split(":")
+            if direction == "desc":
+                query = query.order_by(desc(getattr(cls, column)))
+            else:
+                query = query.order_by(getattr(cls, column))
         instances = await db.execute(query)
         instances = instances.scalars().all()
         return instances
