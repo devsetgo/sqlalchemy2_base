@@ -4,15 +4,13 @@ from service.settings import config_settings
 from service.database import db_session
 from service.database.user_model import User
 from service.core.user_lib import encrypt_pass
-import datetime
+import time
 
 
 class DatabaseInitializationError(Exception):
     """
     Custom exception for database initialization errors.
     """
-
-    pass
 
 
 async def startup_events():
@@ -21,20 +19,15 @@ async def startup_events():
     If there is an error during database initialization and table creation, a custom exception called
     DatabaseInitializationError is raised with the error message.
 
-    Example:
-    --------
-    To run this function, call it from another async function like so:
-
-    >>> async def main():
-    ...     await startup_events()
-
     """
+
     try:
         # connect to database
         await db_session.db.init()
-        await db_session.db.create_all()
         logger.info("Connecting to database")
-
+        await db_session.db.create_all()
+        logger.info("Creating database tables")
+        logger.info("Connecting to database")
     except Exception as ex:
         error: str = f"Error during database initialization and table creation {ex}"
         logger.critical(error)
@@ -44,11 +37,21 @@ async def startup_events():
     if config_settings.release_env.lower() == "dev":
         logger.warning(f"environment set to 'dev' ")
         logger.info(f"api initiated release_env: {config_settings.release_env}")
-
     else:
         logger.info(f"api initiated release_env: {config_settings.release_env}")
 
-    await create_default_user()
+    if config_settings.admin_email is not None:
+        await create_default_user()
+        logger.warning(f"Admin user {config_settings.admin_email} created")
+
+    if config_settings.create_demonstration_data == True:
+        t0 = time.time()
+        await User.create_demo_user_data(
+            num_instances=config_settings.create_demonstration_quantity
+        )
+        t1 = f"It took {time.time() - t0:.2f} seconds to create demo data"
+        print(t1)
+        logger.warning(f"Demo data created in the database")
 
 
 async def shutdown_events():
@@ -63,10 +66,7 @@ async def shutdown_events():
     """
     try:
         # Close the database connection
-        await db_session.db.close()
-
-        # Log that the database has been disconnected
-        logger.info("Disconnected from database")
+        await db_session.db.disconnect()
     except Exception as ex:
         # If there's an exception, log it as an error
         error: str = f"Error shutting down database: {ex}"
@@ -77,6 +77,15 @@ async def shutdown_events():
 
 
 async def create_default_user():
+    # Check if there are any existing users in the database
+    filters = {"is_admin": True}
+    existing_users = await User.list_all(filters=filters)
+    if existing_users:
+        logger.warning(
+            "Default user creation aborted. User table already has existing data."
+        )
+        return
+
     values: dict = {
         "first_name": config_settings.admin_first_name,
         "last_name": config_settings.admin_last_name,
@@ -89,4 +98,3 @@ async def create_default_user():
 
     user = await User.create(**values)
     logger.debug(f"creating default user: {user}")
-    await User.create_demo_data(num_instances=10)

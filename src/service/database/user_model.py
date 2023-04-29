@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
-from sqlalchemy import Column, String, Boolean, DateTime
-import datetime
-from service.database.common_model import BaseModel
+from sqlalchemy import Column, String, Boolean, DateTime, desc
+
+# from service.database.common_model import BaseModel
 from service.database.db_session import Base
 from sqlalchemy.ext.hybrid import hybrid_property
-from loguru import logger
 from service.database.db_session import db
 from uuid import uuid4
+from datetime import datetime, timedelta
+from loguru import logger
+from sqlalchemy.future import select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+import random
+from service.core.user_lib import encrypt_pass
+import secrets
+from service.core.demo_user_generator import demo_creator
 
 
-class User(BaseModel, Base):
+class User(Base):
     """
     This class represents a user in the database and inherits from BaseModel and Base.
 
@@ -25,6 +32,7 @@ class User(BaseModel, Base):
     """
 
     __tablename__ = "users"
+    id = Column(String, primary_key=True)
     first_name = Column(String(50))
     last_name = Column(String(50))
     email = Column(String(150), unique=True)
@@ -33,6 +41,10 @@ class User(BaseModel, Base):
     is_active = Column(Boolean, default=False)
     is_approved = Column(Boolean, default=False)
     is_admin = Column(Boolean, default=False)
+    date_created = Column(DateTime, index=True, default=datetime.utcnow)
+    date_updated = Column(
+        DateTime, index=True, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     @hybrid_property
     def full_name(self):
@@ -48,46 +60,95 @@ class User(BaseModel, Base):
         )
 
     @classmethod
-    async def create_demo_data(cls, num_instances=10):
-        import silly
-        import random
-        from service.core.user_lib import encrypt_pass
-        import secrets
+    async def list_all(cls, filters=None, order_by=None):
+        logger.debug(f"Listing all {cls.__name__} objects")
+        query = select(cls)
+        if filters:
+            for key, value in filters.items():
+                if key == "date_created":
+                    query = query.where(cls.date_created >= value)
+                elif key == "date_updated":
+                    query = query.where(cls.date_updated >= value)
+                else:
+                    query = query.where(getattr(cls, key).like(f"%{value}%"))
+        if order_by:
+            column, direction = order_by.split(":")
+            if direction.lower() == "desc":
+                query = query.order_by(desc(getattr(cls, column)))
+            else:
+                query = query.order_by(getattr(cls, column))
+        instances = await db.execute(query)
+        instances = instances.scalars().all()
+        return instances
 
-        start_date = datetime.datetime(2015, 8, 20)
+    @classmethod
+    async def create(cls, **kwargs):
+        logger.debug(f"Creating {cls.__name__} with kwargs: {kwargs}")
+        instance = cls(id=str(uuid4()), **kwargs)
+        db.add(instance)
 
-        for i in range(num_instances):
-            # Generate a random number of days between 0 and 365*50 (50 years)
-            days_created = random.randint(0, 365 * 8)
-            days_updated = random.randint(0, 365 * 8)
+        try:
+            await db.commit()
+        except IntegrityError as e:
+            logger.exception("Error committing to database")
+            await db.rollback()
+            raise ValueError("Duplicate value for unique field") from e
+        except Exception as e:
+            logger.exception("Error committing to database")
+            await db.rollback()
+            raise
+        return instance
 
-            # Add the random number of days to the start date to get the final datetime values
-            date_created = start_date + datetime.timedelta(days=days_created)
-            date_updated = start_date + datetime.timedelta(days=days_updated)
+    @classmethod
+    async def delete(cls, id):
+        logger.debug(f"Deleting {cls.__name__} with ID {id}")
+        query = cls.__table__.delete().where(cls.id == id)
+        await db.execute(query)
+        try:
+            await db.commit()
+        except Exception as e:
+            logger.exception("Error committing to database")
+            await db.rollback()
+            raise
 
-            values: dict = {
-                "first_name": f"test-{secrets.token_hex(3)}",
-                "last_name": f"test-{secrets.token_hex(3)}",
-                "email": f"{secrets.token_hex(3)}@Example-{secrets.token_hex(1)}.com",
-                "password": None,
-                "is_admin": False,
-                "date_created": date_created,
-                "date_updated": date_updated,
-            }
+    @classmethod
+    async def update(cls, id, **kwargs):
+        logger.debug(f"Updating {cls.__name__} with ID {id} and kwargs: {kwargs}")
+        query = (
+            cls.__table__.update()
+            .where(cls.id == bindparam("id"))
+            .values(**kwargs)
+            .execution_options(synchronize_session="fetch")
+        )
 
-            pwd = secrets.token_hex(8)
-            pwd_without_spaces = pwd.replace(" ", "")
-            hash_pwd = encrypt_pass(pwd_without_spaces)
-            values["password"] = hash_pwd
+        # Check if row exists before updating
+        instance = await cls.get(id)
 
+        await db.execute(query, {"id": id, **kwargs})
+        # No need for try-except block here
+        await db.commit()
+        return instance
+
+    @classmethod
+    async def create_demo_user_data(cls, num_instances=100):
+        # Check if there are any existing users in the database
+        filters = {"is_admin": False}
+        existing_users = await cls.list_all(filters=filters)
+        if existing_users:
+            logger.warning(
+                "Demo data creation aborted. User table already has existing data."
+            )
+            return
+
+        demo_users = demo_creator(num_instances)
+        for values in demo_users:
             # Create a new instance of the cls class with the generated values
             instance = cls(id=str(uuid4()), **values)
-
-            # Call the create() method to add the instance to the database
             db.add(instance)
 
             try:
                 await db.commit()
-            except Exception:
+            except Exception as e:
+                logger.exception("Error committing demo data to database")
                 await db.rollback()
-                raise
+                raise SQLAlchemyError(str(e))

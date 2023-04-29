@@ -25,21 +25,20 @@ from pydantic import (
 )
 
 
-class DatabaseDriverEnum(str, Enum):  # creating an Enum class
-    postgres = "postgresql+asyncpg"
-    sqlite = "sqlite+aiosqlite"
-    mysql = "mysql+aiomysql"
-    oracle = "oracle+cx_oracle"
+class DatabaseDriverEnum(
+    str, Enum
+):  # creating an Enum class to hold database driver values
+    postgres = "postgresql+asyncpg"  # defining the value for postgres driver
+    sqlite = "sqlite+aiosqlite"  # defining the value for sqlite driver
+    mysql = "mysql+aiomysql"  # defining the value for mysql driver
+    oracle = "oracle+cx_oracle"  # defining the value for oracle driver
 
-    class Config:
-        use_enum_values = True
+    class Config:  # creating a nested class to hold configuration options for the Enum class
+        use_enum_values = True  # setting the configuration option to use the Enum values instead of their names
 
 
 class Settings(BaseSettings):
-    # database_driver: DatabaseDriverEnum = 'sqlite'
-
     """
-    Note: When extending or modifying, the configuration endpoint will exclude anything that contains the words in the 'exclude_config' setting
     Class that defines the various configuration attributes required by the application.
 
     Attributes:
@@ -80,6 +79,7 @@ class Settings(BaseSettings):
 
     """
 
+    # List of configuration attributes to exclude from the configuration endpoint
     exclude_config: list = [
         "pwd",
         "password",
@@ -89,6 +89,8 @@ class Settings(BaseSettings):
         "secret",
         "username",
     ]
+
+    # Default values for configuration attributes
     app_name: str = "Demo"
     app_version: str = "1.0.0"
     app_description: str = "This is what the app is for."
@@ -113,6 +115,7 @@ class Settings(BaseSettings):
     db_location: str = "localhost"
     db_name: str = "api"
     sqlite_memory: bool = False
+
     # Logging settings
     logging_directory: str = "log"
     log_name: str = "log.json"
@@ -121,6 +124,7 @@ class Settings(BaseSettings):
     loguru_logging_level: str = "INFO"
     loguru_log_backtrace: bool = True
     enable_trace_id: bool = True
+
     # Generate CSRF secret key and secret key
     csrf_secret = secrets.token_hex(256)
     secret_key = secrets.token_hex(256)
@@ -148,17 +152,30 @@ class Settings(BaseSettings):
         '"',
         "`",
     ]
+
+    # Default values for admin user creation
     admin_first_name: str
     admin_last_name: str
     admin_email: str
     admin_password: str
+    create_demonstration_data: bool = False
+    create_demonstration_quantity: int = 0
 
+    # Set the current date and time when the application is run
     date_run: datetime = datetime.utcnow()
 
     @validator("database_driver", pre=True)
     def parse_database_driver(cls, value):
+        """
+        Validator function to convert the input string to the corresponding enum member value.
+
+        Args:
+            value (str): The input string to be converted.
+
+        Returns:
+            The corresponding enum member value if the input string is valid, otherwise returns the input value.
+        """
         if isinstance(value, str):
-            # Convert the input string to the corresponding enum member value
             try:
                 return DatabaseDriverEnum[value]
             except KeyError:

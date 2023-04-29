@@ -5,7 +5,7 @@ from loguru import logger
 from settings import config_settings
 from starlette.middleware.sessions import SessionMiddleware
 
-from starlette_exporter import PrometheusMiddleware, handle_metrics
+from starlette_exporter import PrometheusMiddleware
 
 from service.core.custom_middleware import LoggerMiddleware
 

@@ -11,7 +11,7 @@ db_driver = config_settings.database_driver
 
 if db_driver == "sqlite+aiosqlite":
     if config_settings.sqlite_memory:
-        db_config = f"{db_driver}:///:memory:"
+        db_config = f"{db_driver}:///:memory:?cache=shared"
     else:
         db_config = f"{db_driver}:///_sqlite_db/{config_settings.db_name}.db"
 else:
@@ -21,18 +21,6 @@ logger.debug(f"Database Driver Setting: {db_driver}")
 
 
 class AsyncDatabaseSession:
-    """
-    This class creates an async database session and has two methods:
-
-    1. init() - Initializes the database engine and creates a sessionmaker with an AsyncSession class.
-    2. create_all() - Creates all tables from the Base metadata using run_sync() method from the connection.
-
-    Example usage:
-        db = AsyncDatabaseSession()
-        await db.init()
-        await db.create_all()
-    """
-
     def __init__(self):
         self._session = None
         self._engine = None
@@ -41,31 +29,41 @@ class AsyncDatabaseSession:
         return getattr(self._session, name)
 
     async def init(self):
-        """
-        Initializes the database engine and creates a sessionmaker with an AsyncSession class.
-        """
-        logger.info("Initializing database engine...")
-        self._engine = create_async_engine(
-            db_config,
-            future=True,
-            echo=True,
-        )
+        try:
+            logger.info("Initializing database engine...")
+            self._engine = create_async_engine(
+                db_config,
+                future=True,
+                echo=True,
+            )
 
-        async_session = sessionmaker(
-            self._engine, expire_on_commit=False, class_=AsyncSession
-        )
+            async_session = sessionmaker(
+                self._engine, expire_on_commit=False, class_=AsyncSession
+            )
 
-        self._session = async_session()
-        logger.info("Database engine initialized successfully.")
+            self._session = async_session()
+            logger.info("Database engine initialized successfully.")
+        except:
+            logger.exception("Error initializing database engine")
+            raise
 
     async def create_all(self):
-        """
-        Creates all tables from the Base metadata using run_sync() method from the connection.
-        """
-        logger.info("Creating database tables...")
-        async with self._engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created successfully.")
+        try:
+            logger.info("Creating database tables...")
+            async with self._engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables created successfully.")
+        except:
+            logger.exception("Error creating database tables")
+            raise
+
+    async def connect(self):
+        await self.init()
+
+    async def disconnect(self):
+        await self._session.close()
+        await self._engine.dispose()
+        logger.info("Disconnected from database")
 
 
 db = AsyncDatabaseSession()
