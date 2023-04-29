@@ -131,6 +131,8 @@ class User(Base):
 
     @classmethod
     async def create_demo_user_data(cls, num_instances=100):
+        from tqdm import tqdm
+        
         # Check if there are any existing users in the database
         filters = {"is_admin": False}
         existing_users = await cls.list_all(filters=filters)
@@ -141,7 +143,7 @@ class User(Base):
             return
 
         demo_users = demo_creator(num_instances)
-        for values in demo_users:
+        for values in tqdm(demo_users):
             # Create a new instance of the cls class with the generated values
             instance = cls(id=str(uuid4()), **values)
             db.add(instance)
