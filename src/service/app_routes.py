@@ -4,8 +4,7 @@ from fastapi import FastAPI, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from loguru import logger
 
-from service.api import health
-from service.api import user
+from service.api import health, user
 from service.core.http_codes import GET_CODES
 
 

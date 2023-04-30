@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from typing import Any
 
+from loguru import logger
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-from loguru import logger
+
 from service.settings import config_settings
-from sqlalchemy.exc import SQLAlchemyError
 
 Base = declarative_base()
 
@@ -115,5 +116,3 @@ class AsyncDatabaseSession:
 
 
 db = AsyncDatabaseSession()
-
-

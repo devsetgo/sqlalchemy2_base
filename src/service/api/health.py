@@ -5,6 +5,7 @@ import io
 import tracemalloc
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Union
+
 from cpuinfo import get_cpu_info_json
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import ORJSONResponse

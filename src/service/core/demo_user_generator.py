@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import random
-from datetime import datetime, timedelta
 import uuid
+from datetime import datetime, timedelta
+
 from loguru import logger
 
 start_date = datetime(2015, 8, 20)
@@ -17,6 +18,7 @@ def demo_creator(qty: int) -> list:
     Returns:
         list: A list of dictionaries containing user data.
               Each dictionary contains the following keys:
+              - user_name: A unique user name
               - first_name: The user's first name.
               - last_name: The user's last name.
               - email: The user's email address.
@@ -28,6 +30,7 @@ def demo_creator(qty: int) -> list:
     data = []
     while len(data) < qty:
         # Generate random values for each field
+        user_name = f"test{random.randint(0, 99999):03}{random.randint(0, 99999):03}"
         first_name = f"test-{random.randint(0, 99999):03}"
         last_name = f"test-{random.randint(0, 99999):03}"
         email = f"{uuid.uuid4()}@Example-{random.randint(0, 99999):02}.com"
@@ -38,6 +41,7 @@ def demo_creator(qty: int) -> list:
 
         # Create a dictionary with the generated values
         values = {
+            "user_name": user_name.lower(),
             "first_name": first_name,
             "last_name": last_name,
             "email": email,

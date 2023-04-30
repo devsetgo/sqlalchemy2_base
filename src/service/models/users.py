@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-
-# Import necessary modules
-from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field, validator
-
-
 # Import custom modules
 from datetime import datetime
 from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr, Field, validator
 
 
 class DaysEnum(str, Enum):
@@ -40,6 +37,18 @@ class DaysEnum(str, Enum):
 # For example, if you want to filter data based on the last 30 days, you can use:
 # DaysEnum.LAST_30_DAYS
 
+class UserQuery(BaseModel):
+    user_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_approved: Optional[bool] = None
+    created_days: Optional[DaysEnum] = None
+    updated_days: Optional[DaysEnum] = None
+    limit: Optional[int] = Field(None, le=500)
+    offset: Optional[int] = Field(None,ge=0, le=1000000000)
 
 class UserSchema(BaseModel):
     """
@@ -68,6 +77,14 @@ class UserSchema(BaseModel):
     """
 
     # Define the attributes of the UserSchema model
+    # Define the attributes of the UserSchema model
+    user_name: str = Field(
+        ...,
+        min_length=4,
+        max_length=20,
+        example="hellokitty",
+        regex="^[a-zA-Z0-9]+$",  # Add this line to enforce the pattern
+    )
     first_name: str = Field(
         ..., alias="firstName", min_length=1, max_length=50, example="John"
     )
@@ -115,14 +132,52 @@ class UserSchema(BaseModel):
             raise ValueError("passwords do not match")
         return v
 
+    @validator("password")
+    def validate_password_strength(cls, v) -> str:
+        """
+        A Pydantic validator method that checks if the password meets the required strength criteria.
+
+        Parameters:
+        -----------
+        cls : UserSchema
+            The UserSchema class.
+        v : str
+            The value of the password field.
+
+        Returns:
+        --------
+        str
+            The value of the password field if it meets the strength criteria.
+
+        Raises:
+        -------
+        ValueError
+            If the password does not meet the strength criteria.
+
+        """
+
+        # Check for at least one uppercase letter, one lowercase letter, one digit, and one special character
+        if not (
+            any(c.isupper() for c in v)
+            and any(c.islower() for c in v)
+            and any(c.isdigit() for c in v)
+            and any(c in "!@#$%^&*()" for c in v)
+        ):
+            raise ValueError(
+                "password must contain at least one uppercase letter, "
+                "one lowercase letter, one digit, and one special character"
+            )
+        return v
+
 
 class UserSerializer(BaseModel):
-    id: str
-    first_name: str
-    last_name: str
-    email: str
-    date_created: datetime
-    date_updated: datetime
+    id: str = None
+    user_name: str = None
+    # first_name: str = None
+    # last_name: str = None
+    email: EmailStr = None
+    date_created: datetime = None
+    date_updated: datetime = None
 
     # full_name: str
 
@@ -131,10 +186,10 @@ class UserSerializer(BaseModel):
         schema_extra = {
             "example": {
                 "id": "123",
-                "first_name": "John",
-                "last_name": "Doe",
+                "user_name": "John",
                 "email": "johndoe@example.com",
-                "full_name": "John Doe",
+                "date_created": "2023-04-30T00:47:56.715397",
+                "date_updated": "2023-04-30T00:47:56.715402",
             }
         }
 
@@ -149,3 +204,19 @@ class UserUpdateSchema(BaseModel):
     )
     email: EmailStr = Field(..., alias="email", example="jdoe@example.com")
     notes: str = Field(None, alias="notes", max_length=5000, example="A bunch of words")
+
+
+class UserAdmin(BaseModel):
+    """
+    A Pydantic model representing a user with admin status.
+
+    Attributes:
+        id (str): The unique identifier of the user. Must be a valid UUID.
+        is_admin (bool): A flag indicating whether the user has admin privileges.
+
+    Example:
+        user_admin = UserAdmin(id="7033c51c-60bb-4a29-bb33-9d205157760b", is_admin=True)
+    """
+
+    id: str = Field(..., alias="id", example="7033c51c-60bb-4a29-bb33-9d205157760b")
+    is_admin: bool = Field(False, alias="isAdmin")

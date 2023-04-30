@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+from contextlib import asynccontextmanager
+
 from dsg_lib import logging_config
 from fastapi import FastAPI
+
 from service import resources
 from service.app_routes import add_routes
 from service.settings import config_settings
-from contextlib import asynccontextmanager
 
 # Configure logging using dsg_lib.logging_config module
 logging_config.config_log(

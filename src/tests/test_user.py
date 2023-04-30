@@ -1,9 +1,12 @@
 import json
 from unittest import TestCase
+
 from fastapi.testclient import TestClient
+
 from service.main import app
 
 client = TestClient(app)
+
 
 class TestUserAPI(TestCase):
     def test_get_all_users(self):
@@ -30,7 +33,6 @@ class TestUserAPI(TestCase):
         # self.assertIn("Invalid value for 'updated_days'", response.text)
 
 
-
 # # -*- coding: utf-8 -*-
 # import json
 # from fastapi.testclient import TestClient
@@ -38,7 +40,6 @@ class TestUserAPI(TestCase):
 # import pytest
 # client = TestClient(app)
 # from service.database.db_session import AsyncDatabaseSession
-
 
 
 # def test_get_all_users():
