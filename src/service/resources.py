@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+import time
+
 from loguru import logger
-from service.settings import config_settings
+
+from service.core.user_lib import encrypt_pass
 from service.database import db_session
 from service.database.user_model import User
-from service.core.user_lib import encrypt_pass
-import time
+from service.settings import config_settings
 
 
 class DatabaseInitializationError(Exception):
@@ -87,6 +89,7 @@ async def create_default_user():
         return
 
     values: dict = {
+        "user_name": config_settings.admin_user_name,
         "first_name": config_settings.admin_first_name,
         "last_name": config_settings.admin_last_name,
         "email": config_settings.admin_email.lower(),

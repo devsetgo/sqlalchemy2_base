@@ -20,9 +20,8 @@ from functools import lru_cache
 
 from pydantic import (
     BaseSettings,  # A library for data validation and settings management
-    validator,
-    constr,
 )
+from pydantic import validator
 
 
 class DatabaseDriverEnum(
@@ -129,31 +128,8 @@ class Settings(BaseSettings):
     csrf_secret = secrets.token_hex(256)
     secret_key = secrets.token_hex(256)
 
-    # Define invalid character list
-    invalid_character_list: list = [
-        " ",
-        ";",
-        "<",
-        ">",
-        "/",
-        "\\",
-        "{",
-        "}",
-        "[",
-        "]",
-        "+",
-        "=",
-        "?",
-        "&",
-        ",",
-        ":",
-        "'",
-        ".",
-        '"',
-        "`",
-    ]
-
     # Default values for admin user creation
+    admin_user_name: str
     admin_first_name: str
     admin_last_name: str
     admin_email: str
