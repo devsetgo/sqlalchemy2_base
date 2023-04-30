@@ -9,9 +9,16 @@ from loguru import logger
 from sqlalchemy.exc import IntegrityError
 
 from service.core.user_lib import encrypt_pass
+
 # Import custom modules
 from service.database.user_model import User
-from service.models.users import DaysEnum, UserSchema, UserSerializer, UserUpdateSchema,UserQuery
+from service.models.users import (
+    DaysEnum,
+    UserSchema,
+    UserSerializer,
+    UserUpdateSchema,
+    UserQuery,
+)
 
 # Create an instance of APIRouter
 router = APIRouter()
@@ -29,7 +36,7 @@ async def get_all_users(
     is_approved: Optional[bool] = Query(None),
     created_days: Optional[DaysEnum] = Query(None),
     updated_days: Optional[DaysEnum] = Query(None),
-    limit: Optional[int] = Query(None, ge=0,le=1000),
+    limit: Optional[int] = Query(None, ge=0, le=1000),
     offset: Optional[int] = Query(None, ge=0, le=1000000000),
 ):
     """
@@ -113,7 +120,8 @@ async def get_all_users(
         "query_data": {
             "total_count": total_user,
             "result_count": len(users),
-            "limit":limit,"offset":offset,
+            "limit": limit,
+            "offset": offset,
             "filters": filters,
         },
         "users": users,
@@ -125,40 +133,142 @@ async def get_all_users(
     # Return the results
     return results
 
+
 # API Route located at /api/v1/user/
 @router.get("/id/{id}", response_model=UserSerializer)
 async def get_user(id: str):
-    user = await User.get(id)
-    if user is None:
+    """
+    Get a user by ID.
+
+    Args:
+        id (str): The ID of the user to retrieve.
+
+    Raises:
+        HTTPException: If the user is not found.
+
+    Returns:
+        UserSerializer: The serialized user object.
+    """
+
+    # Log that we're attempting to retrieve a user with the provided ID.
+    logger.info(f"Attempting to retrieve user with ID {id}")
+
+    # Retrieve the user from the database using the provided ID.
+    user = await User.get_id(id)
+
+    # If the user is not found, raise an HTTPException with status code 404.
+    if not user:
+        # Log that the user was not found.
+        logger.warning(f"User with ID {id} not found")
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+
+    # Serialize the user object using the UserSerializer and return it.
+    user_data = UserSerializer.from_orm(user)
+    # Log that we successfully retrieved the user.
+    logger.info(f"Retrieved user with ID {id}: {user_data}")
+    return user_data
 
 
 # API Route located at /api/v1/user/
 @router.post("/create", response_model=UserSerializer)
 async def create_user(user: UserSchema):
+    """
+    Create a new user in the database.
+
+    Args:
+        user (UserSchema): A Pydantic model representing the user to be created.
+
+    Returns:
+        UserSerializer: A Pydantic model representing the newly created user.
+    """
+
+    # Extract values from the user model and log them for debugging purposes.
     values = user.dict()
+    logger.debug(f"submitted values: {values}")
+
+    # Normalize the username and email address to lowercase.
     values["user_name"] = str(values["user_name"]).lower()
+    values["email"] = str(values["email"]).lower()
+
+    # Hash the password using the encrypt_pass() function and remove the password_two field.
     hash_pwd = encrypt_pass(values["password"])
     values["password"] = hash_pwd
     values.pop("password_two")
-    values["email"] = str(values["email"]).lower()
 
     try:
-        user = await User.create(**values)
-        return user
-    except IntegrityError:
+        # Create a new user object in the database using the extracted values.
+        user_obj = await User.create(**values)
+
+        # Log a message indicating that the user was successfully created.
+        logger.info(f"User created with email {user_obj.email}")
+    except IntegrityError as e:
+        # If an integrity error occurs (e.g. duplicate email address), log an error message and raise an HTTPException.
+        logger.error(f"Error creating user: {e}")
         raise HTTPException(status_code=400, detail="Email address already exists")
+
+    # Serialize the user object using the UserSerializer and return it.
+    user_data = UserSerializer.from_orm(user_obj)
+    return user_data
 
 
 # API Route located at /api/v1/user/
 @router.put("/id/{id}", response_model=UserSerializer)
-async def update(id: str, user: UserUpdateSchema):
-    user = await User.update(id, **user.dict())
-    return user
+async def update_user(id: str, user: UserUpdateSchema):
+    """
+    Update a user in the database.
 
+    Args:
+        id (str): The ID of the user to be updated.
+        user (UserUpdateSchema): A Pydantic model representing the fields to be updated.
 
-# /api/v1/user/
+    Returns:
+        UserSerializer: A Pydantic model representing the updated user.
+    """
+
+    # Attempt to retrieve the user from the database by ID.
+    db_user = await User.get_or_none(id=id)
+
+    if db_user is None:
+        # If the user does not exist, raise an HTTPException with a 404 status code.
+        logger.error(f"User with ID {id} not found")
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update the fields of the retrieved user object using the values from the user model.
+    for field, value in user.dict(exclude_unset=True).items():
+        setattr(db_user, field, value)
+
+    # Save the updated user object back to the database.
+    await db_user.save()
+    logger.info(f"User with ID {id} updated successfully")
+
+    # Serialize the updated user object using the UserSerializer and return it.
+    updated_user = UserSerializer.from_orm(db_user)
+    return updated_user
+
+# API Route located at /api/v1/user/
 @router.delete("/id/{id}", response_model=bool)
 async def delete_user(id: str):
-    return await User.delete(id)
+    """
+    Delete a user from the database by ID.
+
+    Args:
+        id (str): The ID of the user to be deleted.
+
+    Returns:
+        bool: True if the user was deleted successfully, False otherwise.
+    """
+
+    # Attempt to retrieve the user from the database by ID.
+    db_user = await User.get_or_none(id=id)
+
+    if db_user is None:
+        # If the user does not exist, raise an HTTPException with a 404 status code.
+        logger.error(f"User with ID {id} not found")
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Delete the user from the database.
+    num_deleted = await db_user.delete()
+    logger.info(f"{num_deleted} rows deleted for user with ID {id}")
+
+    # Return True if the delete operation was successful, False otherwise.
+    return num_deleted > 0

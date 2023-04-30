@@ -37,6 +37,7 @@ class DaysEnum(str, Enum):
 # For example, if you want to filter data based on the last 30 days, you can use:
 # DaysEnum.LAST_30_DAYS
 
+
 class UserQuery(BaseModel):
     user_name: Optional[str] = None
     first_name: Optional[str] = None
@@ -48,7 +49,8 @@ class UserQuery(BaseModel):
     created_days: Optional[DaysEnum] = None
     updated_days: Optional[DaysEnum] = None
     limit: Optional[int] = Field(None, le=500)
-    offset: Optional[int] = Field(None,ge=0, le=1000000000)
+    offset: Optional[int] = Field(None, ge=0, le=1000000000)
+
 
 class UserSchema(BaseModel):
     """
@@ -173,9 +175,13 @@ class UserSchema(BaseModel):
 class UserSerializer(BaseModel):
     id: str = None
     user_name: str = None
-    # first_name: str = None
-    # last_name: str = None
+    first_name: str = None
+    last_name: str = None
     email: EmailStr = None
+    notes: str = None
+    is_active: bool = None
+    is_approved: bool = None
+    is_admin: bool = None
     date_created: datetime = None
     date_updated: datetime = None
 

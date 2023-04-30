@@ -30,22 +30,22 @@ class BaseModel:
     async def list_all(cls, filters=None, order_by=None, limit=500, offset=0):
         """
         List all instances of the model, optionally filtered, sorted, limited and offset.
-    
+
         Args:
             filters (dict, optional): A dictionary of filters to apply. Defaults to None.
             order_by (str, optional): A string in the format "column:direction" to sort the results. Defaults to None.
             limit (int, optional): The maximum number of instances to return. Defaults to 100, maxes out at 500.
             offset (int, optional): The number of instances to skip before returning results. Defaults to 0.
-    
+
         Returns:
             list: A list of instances matching the filters and sorted by the specified order.
-    
+
         Example:
             users = await User.list_all(filters={"name": "John"}, order_by="date_created:desc", limit=10, offset=20)
         """
         logger.debug(f"Listing all {cls.__name__} objects")
         query = select(cls)
-    
+
         # Apply filters if provided
         if filters:
             for key, value in filters.items():
@@ -55,7 +55,7 @@ class BaseModel:
                     query = query.where(cls.date_updated >= value)
                 else:
                     query = query.where(getattr(cls, key).like(f"%{value}%"))
-    
+
         # Apply ordering if provided
         if order_by:
             column, direction = order_by.split(":")
@@ -63,14 +63,14 @@ class BaseModel:
                 query = query.order_by(desc(getattr(cls, column)))
             else:
                 query = query.order_by(getattr(cls, column))
-    
+
         # Apply limit and offset if provided
         if limit is not None:
             limit = min(limit, 1000)
             query = query.limit(limit)
         if offset is not None:
             query = query.offset(offset)
-    
+
         instances = await db.execute(query)
         instances = instances.scalars().all()
         return instances
@@ -104,7 +104,6 @@ class BaseModel:
 
         count = await db.scalar(query)
         return count
-    
 
     @classmethod
     async def create(cls, **kwargs):
@@ -193,4 +192,24 @@ class BaseModel:
         await db.execute(query, {"id": id, **kwargs})
         # No need for try-except block here
         await db.commit()
+        return instance
+
+    @classmethod
+    async def get_id(cls, id):
+        """
+        Get an instance of the model by its ID.
+
+        Args:
+            id (str): The ID of the instance to retrieve.
+
+        Returns:
+            BaseModel: The retrieved instance.
+
+        Example:
+            user = await User.get_id("123e4567-e89b-12d3-a456-426614174000")
+        """
+        logger.debug(f"Retrieving {cls.__name__} with ID {id}")
+        query = select(cls).where(cls.id == id)
+        instance = await db.execute(query)
+        instance = instance.scalars().first()
         return instance
