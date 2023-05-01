@@ -17,6 +17,8 @@ from starlette_exporter import handle_metrics
 from service.core.http_codes import SYSTEM_INFO_CODE
 from service.core.process_checks import get_processes
 from service.settings import config_settings
+from service.database.db_session import db
+from sqlalchemy import text
 
 # Create an instance of APIRouter
 router = APIRouter()
@@ -55,6 +57,7 @@ class HealthCheckResponseModel(BaseModel):
         }
 
 
+# route is /api/health
 @router.get(
     "/status",
     tags=["system-health"],
@@ -106,6 +109,69 @@ async def health_main() -> HealthCheckResponseModel:
         raise HTTPException(status_code=500, detail=error)
 
 
+# route is /api/health
+@router.get(
+    "/database",
+    tags=["system-health"],
+    response_class=ORJSONResponse,
+    response_model=dict,
+)
+async def health_database() -> dict:
+    """
+    Check the status of the database connection.
+
+    Returns:
+        A dictionary containing the status of the database connection.
+        If the connection is successful, it returns a dictionary with the following keys:
+            - "database": "up"
+            - "database_type": The type of the database (e.g. PostgreSQL, MySQL, etc.)
+            - "version": The version of the database
+        If the connection fails, it returns a dictionary with the following keys:
+            - "database": "down"
+            - "error_message": The error message returned by the database driver
+    """
+
+    # Get the database driver from the config settings
+    data_base_driver = config_settings.database_driver
+
+    try:
+        # Attempt to connect to the database
+        db.execute("SELECT 1")
+
+        # Retrieve database version using the db session
+        if "sqlite" in data_base_driver:
+            result = await db.execute(text("SELECT sqlite_version()"))
+            version = result.scalar()
+        else:
+            result = await db.execute(text("SELECT version()"))
+            version = result.scalar()
+
+        # Determine database type based on the driver name
+        if "postgresql" in data_base_driver:
+            database_type = "PostgreSQL"
+        elif "sqlite" in data_base_driver:
+            database_type = "SQLite"
+        elif "mysql" in data_base_driver:
+            database_type = "MySQL"
+        elif "oracle" in data_base_driver:
+            database_type = "Oracle"
+        else:
+            database_type = "Unknown"
+
+        # Log success message
+        logger.success("Database is up and running")
+
+        # Return the database status
+        return {"database": "up", "database_type": database_type, "version": version}
+    except Exception as e:
+        # Log error message
+        logger.error(f"Error connecting to database: {str(e)}")
+
+        # Return an error message if connection fails
+        return {"database": "down", "error_message": str(e)}
+
+
+# route is /api/health
 @router.get("/system-info", response_class=ORJSONResponse, tags=["system-health"])
 def get_system_info() -> Dict[str, str]:
     """
@@ -143,6 +209,7 @@ class ProcessesResponse(BaseModel):
     running_processes: List[Process]
 
 
+# route is /api/health
 @router.get(
     "/processes",
     response_class=ORJSONResponse,
@@ -196,6 +263,7 @@ class ConfigurationResponse(BaseModel):
         }
 
 
+# route is /api/health
 @router.get(
     "/configuration", responses=SYSTEM_INFO_CODE, response_model=ConfigurationResponse
 )
@@ -245,6 +313,7 @@ async def configuration():
         raise HTTPException(status_code=409, detail=error)
 
 
+# route is /api/health
 @router.get("/heapdump")
 async def heapdump():
     """

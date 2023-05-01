@@ -2,9 +2,9 @@
 
 # Import necessary modules
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status, Query, Body
+from fastapi import APIRouter, HTTPException, Query, status
 from loguru import logger
 from sqlalchemy.exc import IntegrityError
 
@@ -12,13 +12,7 @@ from service.core.user_lib import encrypt_pass
 
 # Import custom modules
 from service.database.user_model import User
-from service.models.users import (
-    DaysEnum,
-    UserSchema,
-    UserSerializer,
-    UserUpdateSchema,
-    UserQuery,
-)
+from service.models.users import DaysEnum, UserSchema, UserSerializer, UserUpdateSchema
 
 # Create an instance of APIRouter
 router = APIRouter()
@@ -244,6 +238,7 @@ async def update_user(id: str, user: UserUpdateSchema):
     # Serialize the updated user object using the UserSerializer and return it.
     updated_user = UserSerializer.from_orm(db_user)
     return updated_user
+
 
 # API Route located at /api/v1/user/
 @router.delete("/id/{id}", response_model=bool)
