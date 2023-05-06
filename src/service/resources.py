@@ -5,7 +5,7 @@ from loguru import logger
 
 from service.core.user_lib import encrypt_pass
 from service.database import db_session
-from src.service.database.user_schema import User
+from service.database.user_schema import User
 from service.settings import config_settings
 
 

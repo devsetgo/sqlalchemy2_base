@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from service.core.demo_user_generator import demo_creator
-from src.service.database.common_schema import BaseModel
+from service.database.common_schema import BaseModel
 from service.database.db_session import Base, db
 
 

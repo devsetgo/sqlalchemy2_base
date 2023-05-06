@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from service.core.user_lib import encrypt_pass
 
 # Import custom modules
-from src.service.database.user_schema import User
+from service.database.user_schema import User
 from service.models.users import DaysEnum, UserSchema, UserSerializer, UserUpdateSchema
 
 # Create an instance of APIRouter
