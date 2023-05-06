@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from service.core.user_lib import encrypt_pass
 
 # Import custom modules
-from service.database.user_model import User
+from src.service.database.user_schema import User
 from service.models.users import DaysEnum, UserSchema, UserSerializer, UserUpdateSchema
 
 # Create an instance of APIRouter
@@ -122,7 +122,7 @@ async def get_all_users(
     }
 
     # Log the number of users retrieved and the filters used
-    logger.info(f"Retrieved {len(users)} users with filters: {filters}")
+    # logger.info(f"Retrieved {len(users)} users with filters: {filters}")
 
     # Return the results
     return results

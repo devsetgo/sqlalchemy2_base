@@ -5,7 +5,7 @@ from loguru import logger
 
 from service.core.user_lib import encrypt_pass
 from service.database import db_session
-from service.database.user_model import User
+from src.service.database.user_schema import User
 from service.settings import config_settings
 
 
@@ -46,7 +46,7 @@ async def startup_events():
         await create_default_user()
         logger.warning(f"Admin user {config_settings.admin_email} created")
 
-    if config_settings.create_demonstration_data == True:
+    if config_settings.create_demonstration_data:
         t0 = time.time()
         await User.create_demo_user_data(
             num_instances=config_settings.create_demonstration_quantity

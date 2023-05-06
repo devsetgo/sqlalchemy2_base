@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from service.core.demo_user_generator import demo_creator
-from service.database.common_model import BaseModel
+from src.service.database.common_schema import BaseModel
 from service.database.db_session import Base, db
 
 
@@ -27,7 +27,7 @@ class User(BaseModel, Base):
     """
 
     __tablename__ = "users"
-    # id, date_created, & date_updated are in the BaseModel
+    
     user_name = Column(String(50), unique=True, index=True)
     first_name = Column(String(50))
     last_name = Column(String(50))
@@ -37,6 +37,7 @@ class User(BaseModel, Base):
     is_active = Column(Boolean, default=False, index=True)
     is_approved = Column(Boolean, default=False, index=True)
     is_admin = Column(Boolean, default=False, index=True)
+
 
     @hybrid_property
     def full_name(self):

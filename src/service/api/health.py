@@ -136,7 +136,7 @@ async def health_database() -> dict:
 
     try:
         # Attempt to connect to the database
-        db.execute("SELECT 1")
+        await db.execute("SELECT 1")
 
         # Retrieve database version using the db session
         if "sqlite" in data_base_driver:
