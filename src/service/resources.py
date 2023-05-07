@@ -7,7 +7,7 @@ from service.core.user_lib import encrypt_pass
 from service.database import db_session
 from service.database.user_schema import User
 from service.settings import config_settings
-
+from service.core.logo import print_logo
 
 class DatabaseInitializationError(Exception):
     """
@@ -22,7 +22,8 @@ async def startup_events():
     DatabaseInitializationError is raised with the error message.
 
     """
-
+    # Print application Logo
+    print_logo()
     try:
         # connect to database
         await db_session.db.init()
@@ -42,18 +43,34 @@ async def startup_events():
     else:
         logger.info(f"api initiated release_env: {config_settings.release_env}")
 
-    if config_settings.admin_email is not None:
-        await create_default_user()
-        logger.warning(f"Admin user {config_settings.admin_email} created")
+    if config_settings.create_admin:
+        filters = {"is_admin":True}
+        admin_exists = await User.list_all(filters=None)
+        warning =f"Create Admin is set to {config_settings.create_admin}"
+        print(warning)
+        logger.warning(warning)
+        if len(admin_exists) == 0:
+            ####
+            print("ADMIN CREATED")
+            await create_default_user()
+            logger.warning(f"Admin user {config_settings.admin_email} created")
 
     if config_settings.create_demonstration_data:
-        t0 = time.time()
-        await User.create_demo_user_data(
-            num_instances=config_settings.create_demonstration_quantity
-        )
-        t1 = f"It took {time.time() - t0:.2f} seconds to create demo data"
-        print(t1)
-        logger.warning(f"Demo data created in the database")
+        filters = {"is_admin":False}
+        users_exists = await User.list_all(filters=filters)
+        warning =f"Create demo user is set to {config_settings.create_demonstration_data}"
+        print(warning)
+        logger.warning(warning)
+        logger.warning(f"Create demo users is set to {config_settings.create_demonstration_data}")
+        if len(users_exists) == 0:
+            print("Demo users created")
+            t0 = time.time()
+            await User.create_demo_user_data(
+                num_instances=config_settings.create_demonstration_quantity
+            )
+            t1 = f"It took {time.time() - t0:.2f} seconds to create demo data"
+            print(t1)
+            logger.warning(f"Demo data created in the database")
 
 
 async def shutdown_events():

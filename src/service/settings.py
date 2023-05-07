@@ -129,11 +129,12 @@ class Settings(BaseSettings):
     secret_key = secrets.token_hex(256)
 
     # Default values for admin user creation
-    admin_user_name: str
-    admin_first_name: str
-    admin_last_name: str
-    admin_email: str
-    admin_password: str
+    create_admin: bool = False
+    admin_user_name: str = None
+    admin_first_name: str = None
+    admin_last_name: str = None
+    admin_email: str = None
+    admin_password: str = None
     create_demonstration_data: bool = False
     create_demonstration_quantity: int = 0
 
