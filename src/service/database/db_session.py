@@ -105,6 +105,7 @@ class AsyncDatabaseSession:
         Connect to the database by initializing the engine and session.
         """
         await self.init()
+        logger.info("Connected from database")
 
     async def disconnect(self) -> None:
         """
