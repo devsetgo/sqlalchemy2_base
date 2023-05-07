@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from dsg_lib import logging_config
 from fastapi import FastAPI
-
+from loguru import logger
 from service import resources
 from service.app_routes import add_routes
 from service.settings import config_settings
@@ -32,9 +32,11 @@ async def lifespan(app: FastAPI):
     Yields:
         None: This function is used as an asynchronous context manager, so it yields control to the caller.
     """
+    logger.info("Starting up...")
     # Handle startup events
     await resources.startup_events()
     yield
+    logger.info("Shutting down...")
     # Handle shutdown events
     await resources.shutdown_events()
 
