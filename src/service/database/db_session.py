@@ -2,7 +2,7 @@
 from typing import Any
 
 from loguru import logger
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -33,87 +33,27 @@ db_config = get_db_config()
 logger.debug(f"Database Driver Setting: {config_settings.database_driver}")
 
 
-class AsyncDatabaseSession:
-    """
-    A class for managing asynchronous database sessions using SQLAlchemy and async engine.
+engine = create_async_engine(
+    db_config,
+    future=True,
+)
 
-    Attributes:
-        _session (AsyncSession): The async session object.
-        _engine (create_async_engine): The async engine object.
-    """
 
-    def __init__(self):
-        self._session = None
-        self._engine = None
+async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
-    def __getattr__(self, name: str) -> Any:
-        """
-        Delegate attribute access to the underlying session object.
 
-        Args:
-            name (str): The attribute name.
+async def init_db():
+    logger.info("Initializing database...")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-        Returns:
-            Any: The value of the requested attribute.
-        """
-        return getattr(self._session, name)
 
-    async def init(self) -> None:
-        """
-        Initialize the database engine and create an async session.
-
-        Raises:
-            SQLAlchemyError: If there is an error initializing the database engine.
-        """
+async def get_session() -> AsyncSession:
+    async with async_session() as session:
         try:
-            logger.info("Initializing database engine...")
-            self._engine = create_async_engine(
-                db_config,
-                future=True,
-            )
-
-            async_session = sessionmaker(
-                self._engine, expire_on_commit=False, class_=AsyncSession
-            )
-
-            async with async_session() as session:
-                self._session = session
-
-            logger.info("Database engine initialized successfully.")
-        except SQLAlchemyError:
-            logger.exception("Error initializing database engine")
-            raise
-
-    async def create_all(self) -> None:
-        """
-        Create all tables in the database.
-
-        Raises:
-            SQLAlchemyError: If there is an error creating the database tables.
-        """
-        try:
-            logger.info("Creating database tables...")
-            async with self._engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("Database tables created successfully.")
-        except SQLAlchemyError:
-            logger.exception("Error creating database tables")
-            raise
-
-    async def connect(self) -> None:
-        """
-        Connect to the database by initializing the engine and session.
-        """
-        await self.init()
-        logger.info("Connected from database")
-
-    async def disconnect(self) -> None:
-        """
-        Disconnect from the database by closing the session and disposing the engine.
-        """
-        await self._session.close()
-        await self._engine.dispose()
-        logger.info("Disconnected from database")
-
-
-db = AsyncDatabaseSession()
+            yield session
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+        finally:
+            await session.close()

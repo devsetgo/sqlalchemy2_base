@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
+from fastapi import FastAPI
+
+from loguru import logger
 from contextlib import asynccontextmanager
 
 from dsg_lib import logging_config
 from fastapi import FastAPI
-from loguru import logger
+
 from service import resources
 from service.app_routes import add_routes
 from service.settings import config_settings
+from service.database.db_session import init_db
 
 # Configure logging using dsg_lib.logging_config module
 logging_config.config_log(
@@ -32,11 +36,10 @@ async def lifespan(app: FastAPI):
     Yields:
         None: This function is used as an asynchronous context manager, so it yields control to the caller.
     """
-    logger.info("Starting up...")
     # Handle startup events
+    await init_db()
     await resources.startup_events()
     yield
-    logger.info("Shutting down...")
     # Handle shutdown events
     await resources.shutdown_events()
 
@@ -52,6 +55,13 @@ app = FastAPI(
     # on_shutdown=[resources.shutdown_events],
     lifespan=lifespan,
 )
+
+
+# @app.on_event("startup")
+# async def on_startup():
+#     logger.info("*** on_starup...")
+#     await init_db()
+
 
 # Add routes to the app instance
 add_routes(app=app)

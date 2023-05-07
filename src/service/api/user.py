@@ -4,14 +4,15 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status, Depends
 from loguru import logger
 from sqlalchemy.exc import IntegrityError
 
 from service.core.user_lib import encrypt_pass
 
 # Import custom modules
-from service.database.user_schema import User
+from service.database.db_session import get_session
+from service.database.user_schema import User, UserDAO
 from service.models.users import DaysEnum, UserSchema, UserSerializer, UserUpdateSchema
 
 # Create an instance of APIRouter
@@ -32,6 +33,7 @@ async def get_all_users(
     updated_days: Optional[DaysEnum] = Query(None),
     limit: Optional[int] = Query(None, ge=0, le=1000),
     offset: Optional[int] = Query(None, ge=0, le=1000000000),
+    db=Depends(get_session),
 ):
     """
     Retrieve a list of users based on the provided filters.
@@ -56,6 +58,7 @@ async def get_all_users(
         To retrieve all users with the first name "John" and the last name "Doe", make a GET request to "/?first_name=John&last_name=Doe".
     """
 
+    dao = UserDAO(db)
     # Create an empty dictionary to hold the filters
     filters = {}
 
@@ -104,10 +107,10 @@ async def get_all_users(
         limit = 500
 
     # Retrieve users based on the provided filters
-    users = await User.list_all(filters=filters, limit=limit, offset=offset)
+    users = await dao.list_all(filters=filters, limit=limit, offset=offset)
 
     # Retrieve the total count of users
-    total_user = await User.count_all(filters=filters)
+    total_user = await dao.count_all(filters=filters)
 
     # Create a dictionary containing the total count of users and the filtered list of users
     results = {
@@ -130,7 +133,7 @@ async def get_all_users(
 
 # API Route located at /api/v1/user/
 @router.get("/id/{id}", response_model=UserSerializer)
-async def get_user(id: str):
+async def get_user(id: str, db=Depends(get_session)):
     """
     Get a user by ID.
 
@@ -143,12 +146,13 @@ async def get_user(id: str):
     Returns:
         UserSerializer: The serialized user object.
     """
+    dao = UserDAO(db)
 
     # Log that we're attempting to retrieve a user with the provided ID.
     logger.info(f"Attempting to retrieve user with ID {id}")
 
     # Retrieve the user from the database using the provided ID.
-    user = await User.get_id(id)
+    user = await dao.get_id(id)
 
     # If the user is not found, raise an HTTPException with status code 404.
     if not user:
@@ -165,7 +169,7 @@ async def get_user(id: str):
 
 # API Route located at /api/v1/user/
 @router.post("/create", response_model=UserSerializer)
-async def create_user(user: UserSchema):
+async def create_user(user: UserSchema, db=Depends(get_session)):
     """
     Create a new user in the database.
 
@@ -175,6 +179,7 @@ async def create_user(user: UserSchema):
     Returns:
         UserSerializer: A Pydantic model representing the newly created user.
     """
+    dao = UserDAO(db)
 
     # Extract values from the user model and log them for debugging purposes.
     values = user.dict()
@@ -191,7 +196,7 @@ async def create_user(user: UserSchema):
 
     try:
         # Create a new user object in the database using the extracted values.
-        user_obj = await User.create(**values)
+        user_obj = await dao.create(**values)
 
         # Log a message indicating that the user was successfully created.
         logger.info(f"User created with email {user_obj.email}")
@@ -207,7 +212,7 @@ async def create_user(user: UserSchema):
 
 # API Route located at /api/v1/user/
 @router.put("/id/{id}", response_model=UserSerializer)
-async def update_user(id: str, user: UserUpdateSchema):
+async def update_user(id: str, user: UserUpdateSchema, db=Depends(get_session)):
     """
     Update a user in the database.
 
@@ -219,8 +224,10 @@ async def update_user(id: str, user: UserUpdateSchema):
         UserSerializer: A Pydantic model representing the updated user.
     """
 
+    dao = UserDAO(db)
+
     # Attempt to retrieve the user from the database by ID.
-    db_user = await User.get_or_none(id=id)
+    db_user = await dao.get_or_none(id=id)
 
     if db_user is None:
         # If the user does not exist, raise an HTTPException with a 404 status code.
@@ -242,7 +249,7 @@ async def update_user(id: str, user: UserUpdateSchema):
 
 # API Route located at /api/v1/user/
 @router.delete("/id/{id}", response_model=bool)
-async def delete_user(id: str):
+async def delete_user(id: str, db=Depends(get_session)):
     """
     Delete a user from the database by ID.
 
@@ -252,9 +259,9 @@ async def delete_user(id: str):
     Returns:
         bool: True if the user was deleted successfully, False otherwise.
     """
-
+    dao = UserDAO(db)
     # Attempt to retrieve the user from the database by ID.
-    db_user = await User.get_or_none(id=id)
+    db_user = await dao.get_or_none(id=id)
 
     if db_user is None:
         # If the user does not exist, raise an HTTPException with a 404 status code.

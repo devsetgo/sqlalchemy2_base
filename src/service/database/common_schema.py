@@ -7,8 +7,6 @@ from sqlalchemy import Column, DateTime, String, desc, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 
-from service.database.db_session import db
-
 
 class BaseModel:
     """
@@ -26,8 +24,13 @@ class BaseModel:
         DateTime, index=True, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    @classmethod
-    async def list_all(cls, filters=None, order_by=None, limit=500, offset=0):
+
+class BaseDAO:
+    def __init__(self, db, clazz):
+        self.db = db
+        self.clazz = clazz
+
+    async def list_all(self, filters=None, order_by=None, limit=500, offset=0):
         """
         List all instances of the model, optionally filtered, sorted, limited and offset.
 
@@ -43,26 +46,26 @@ class BaseModel:
         Example:
             users = await User.list_all(filters={"name": "John"}, order_by="date_created:desc", limit=10, offset=20)
         """
-        logger.debug(f"Listing all {cls.__name__} objects")
-        query = select(cls)
+        logger.debug(f"Listing all {self.clazz.__name__} objects")
+        query = select(self.clazz)
 
         # Apply filters if provided
         if filters:
             for key, value in filters.items():
                 if key == "date_created":
-                    query = query.where(cls.date_created >= value)
+                    query = query.where(self.clazz.date_created >= value)
                 elif key == "date_updated":
-                    query = query.where(cls.date_updated >= value)
+                    query = query.where(self.clazz.date_updated >= value)
                 else:
-                    query = query.where(getattr(cls, key).like(f"%{value}%"))
+                    query = query.where(getattr(self.clazz, key).like(f"%{value}%"))
 
         # Apply ordering if provided
         if order_by:
             column, direction = order_by.split(":")
             if direction.lower() == "desc":
-                query = query.order_by(desc(getattr(cls, column)))
+                query = query.order_by(desc(getattr(self.clazz, column)))
             else:
-                query = query.order_by(getattr(cls, column))
+                query = query.order_by(getattr(self.clazz, column))
 
         # Apply limit and offset if provided
         if limit is not None:
@@ -71,12 +74,11 @@ class BaseModel:
         if offset is not None:
             query = query.offset(offset)
 
-        instances = await db.execute(query)
+        instances = await self.db.execute(query)
         instances = instances.scalars().all()
         return instances
 
-    @classmethod
-    async def count_all(cls, filters=None):
+    async def count_all(self, filters=None):
         """
         Count all instances of the model, optionally filtered.
 
@@ -89,24 +91,23 @@ class BaseModel:
         Example:
             count = await User.count_all(filters={"name": "John"})
         """
-        logger.debug(f"Counting all {cls.__name__} objects")
-        query = select(func.count(cls.id))
+        logger.debug(f"Counting all {self.clazz.__name__} objects")
+        query = select(func.count(self.clazz.id))
 
         # Apply filters if provided
         if filters:
             for key, value in filters.items():
                 if key == "date_created":
-                    query = query.where(cls.date_created >= value)
+                    query = query.where(self.clazz.date_created >= value)
                 elif key == "date_updated":
-                    query = query.where(cls.date_updated >= value)
+                    query = query.where(self.clazz.date_updated >= value)
                 else:
-                    query = query.where(getattr(cls, key).like(f"%{value}%"))
+                    query = query.where(getattr(self.clazz, key).like(f"%{value}%"))
 
-        count = await db.scalar(query)
+        count = await self.db.scalar(query)
         return count
 
-    @classmethod
-    async def create(cls, **kwargs):
+    async def create(self, **kwargs):
         """
         Create a new instance of the model and persist it to the database.
 
@@ -122,24 +123,13 @@ class BaseModel:
         Example:
             user = await User.create(name="John Doe", email="john@example.com")
         """
-        logger.debug(f"Creating {cls.__name__} with kwargs: {kwargs}")
-        instance = cls(id=str(uuid4()), **kwargs)
-        db.add(instance)
+        logger.debug(f"Creating {self.clazz.__name__} with kwargs: {kwargs}")
+        instance = self.clazz(id=str(uuid4()), **kwargs)
+        self.db.add(instance)
 
-        try:
-            await db.commit()
-        except IntegrityError as e:
-            logger.exception("Error committing to database")
-            await db.rollback()
-            raise ValueError("Duplicate value for unique field") from e
-        except Exception as e:
-            logger.exception("Error committing to database")
-            await db.rollback()
-            raise
         return instance
 
-    @classmethod
-    async def delete(cls, id):
+    async def delete(self, id):
         """
         Delete an instance of the model by its ID.
 
@@ -152,19 +142,11 @@ class BaseModel:
         Example:
             await User.delete("123e4567-e89b-12d3-a456-426614174000")
         """
-        logger.debug(f"Deleting {cls.__name__} with ID {id}")
-        query = cls.__table__.delete().where(cls.id == id)
-        await db.execute(query)
+        logger.debug(f"Deleting {self.clazz.__name__} with ID {id}")
+        query = self.clazz.__table__.delete().where(self.clazz.id == id)
+        await self.db.execute(query)
 
-        try:
-            await db.commit()
-        except Exception as e:
-            logger.exception("Error committing to database")
-            await db.rollback()
-            raise
-
-    @classmethod
-    async def update(cls, id, **kwargs):
+    async def update(self, id, **kwargs):
         """
         Update an instance of the model by its ID with the provided keyword arguments.
 
@@ -178,24 +160,24 @@ class BaseModel:
         Example:
             user = await User.update("123e4567-e89b-12d3-a456-426614174000", name="Jane Doe")
         """
-        logger.debug(f"Updating {cls.__name__} with ID {id} and kwargs: {kwargs}")
+        logger.debug(
+            f"Updating {self.clazz.__name__} with ID {id} and kwargs: {kwargs}"
+        )
         query = (
-            cls.__table__.update()
-            .where(cls.id == bindparam("id"))
+            self.clazz.__table__.update()
+            .where(self.clazz.id == bindparam("id"))
             .values(**kwargs)
             .execution_options(synchronize_session="fetch")
         )
 
         # Check if row exists before updating
-        instance = await cls.get(id)
+        instance = await self.clazz.get(id)
 
-        await db.execute(query, {"id": id, **kwargs})
-        # No need for try-except block here
-        await db.commit()
+        await self.db.execute(query, {"id": id, **kwargs})
+
         return instance
 
-    @classmethod
-    async def get_id(cls, id):
+    async def get_id(self, id):
         """
         Get an instance of the model by its ID.
 
@@ -208,8 +190,8 @@ class BaseModel:
         Example:
             user = await User.get_id("123e4567-e89b-12d3-a456-426614174000")
         """
-        logger.debug(f"Retrieving {cls.__name__} with ID {id}")
-        query = select(cls).where(cls.id == id)
-        instance = await db.execute(query)
+        logger.debug(f"Retrieving {self.clazz.__name__} with ID {id}")
+        query = select(self.clazz).where(self.clazz.id == id)
+        instance = await self.db.execute(query)
         instance = instance.scalars().first()
         return instance

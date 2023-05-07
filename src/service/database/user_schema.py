@@ -7,8 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from service.core.demo_user_generator import demo_creator
-from service.database.common_schema import BaseModel
-from service.database.db_session import Base, db
+from service.database.common_schema import BaseModel, BaseDAO
+from service.database.db_session import Base
 
 
 class User(BaseModel, Base):
@@ -51,13 +51,17 @@ class User(BaseModel, Base):
             f")>"
         )
 
-    @classmethod
-    async def create_demo_user_data(cls, num_instances=100):
+
+class UserDAO(BaseDAO):
+    def __init__(self, db):
+        super().__init__(db, User)
+
+    async def create_demo_user_data(self, num_instances=100):
         from tqdm import tqdm
 
         # Check if there are any existing users in the database
         filters = {"is_admin": False}
-        existing_users = await cls.list_all(filters=filters)
+        existing_users = await self.list_all(filters=filters)
         if existing_users:
             logger.warning(
                 "Demo data creation aborted. User table already has existing data."
@@ -67,12 +71,5 @@ class User(BaseModel, Base):
         demo_users = demo_creator(num_instances)
         for values in tqdm(demo_users):
             # Create a new instance of the cls class with the generated values
-            instance = cls(id=str(uuid4()), **values)
-            db.add(instance)
-
-            try:
-                await db.commit()
-            except Exception as e:
-                logger.exception("Error committing demo data to database")
-                await db.rollback()
-                raise SQLAlchemyError(str(e))
+            instance = self.clazz(id=str(uuid4()), **values)
+            self.db.add(instance)

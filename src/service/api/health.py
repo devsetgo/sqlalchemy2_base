@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from typing import Dict, List, Union
 
 from cpuinfo import get_cpu_info_json
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Request, Depends
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from pydantic import BaseModel
@@ -17,8 +17,12 @@ from starlette_exporter import handle_metrics
 from service.core.http_codes import SYSTEM_INFO_CODE
 from service.core.process_checks import get_processes
 from service.settings import config_settings
-from service.database.db_session import db
 from sqlalchemy import text
+
+from sqlalchemy.orm import Session
+
+from service.database.db_session import get_session
+
 
 # Create an instance of APIRouter
 router = APIRouter()
@@ -116,7 +120,7 @@ async def health_main() -> HealthCheckResponseModel:
     response_class=ORJSONResponse,
     response_model=dict,
 )
-async def health_database() -> dict:
+async def health_database(db: Session = Depends(get_session)) -> dict:
     """
     Check the status of the database connection.
 
@@ -130,14 +134,10 @@ async def health_database() -> dict:
             - "database": "down"
             - "error_message": The error message returned by the database driver
     """
-
     # Get the database driver from the config settings
     data_base_driver = config_settings.database_driver
 
     try:
-        # Attempt to connect to the database
-        await db.execute(text("SELECT 1"))
-
         # Retrieve database version using the db session
         if "sqlite" in data_base_driver:
             result = await db.execute(text("SELECT sqlite_version()"))
