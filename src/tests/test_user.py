@@ -11,7 +11,6 @@ client = TestClient(app)
 
 
 class TestUserAPI(TestCase):
-
     def test_get_all_users(self):
         response = client.get("/api/v1/user/list")
         self.assertEqual(response.status_code, 200)
