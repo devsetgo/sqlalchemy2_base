@@ -5,6 +5,7 @@ from loguru import logger
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from service.settings import config_settings
 
@@ -38,8 +39,11 @@ engine = create_async_engine(
     future=True,
 )
 
+# _Session = async_sessionmaker(engine, expire_on_commit=False, **session_args)
+session_args = {}
+_session_maker = async_sessionmaker(engine, expire_on_commit=False, **session_args)
 
-async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+# async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
 async def init_db():
@@ -48,12 +52,12 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def get_session() -> AsyncSession:
-    async with async_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
-        finally:
-            await session.close()
+# async def get_session() -> AsyncSession:
+#     async with async_session() as session:
+#         try:
+#             yield session
+#             await session.commit()
+#         except Exception as e:
+#             await session.rollback()
+#         finally:
+#             await session.close()

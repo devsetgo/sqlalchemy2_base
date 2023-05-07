@@ -11,7 +11,6 @@ from sqlalchemy.exc import IntegrityError
 from service.core.user_lib import encrypt_pass
 
 # Import custom modules
-from service.database.db_session import get_session
 from service.database.user_schema import User, UserDAO
 from service.models.users import DaysEnum, UserSchema, UserSerializer, UserUpdateSchema
 
@@ -33,7 +32,6 @@ async def get_all_users(
     updated_days: Optional[DaysEnum] = Query(None),
     limit: Optional[int] = Query(None, ge=0, le=1000),
     offset: Optional[int] = Query(None, ge=0, le=1000000000),
-    db=Depends(get_session),
 ):
     """
     Retrieve a list of users based on the provided filters.
@@ -57,8 +55,7 @@ async def get_all_users(
     Example:
         To retrieve all users with the first name "John" and the last name "Doe", make a GET request to "/?first_name=John&last_name=Doe".
     """
-
-    dao = UserDAO(db)
+    dao = UserDAO()
     # Create an empty dictionary to hold the filters
     filters = {}
 
@@ -133,7 +130,7 @@ async def get_all_users(
 
 # API Route located at /api/v1/user/
 @router.get("/id/{id}", response_model=UserSerializer)
-async def get_user(id: str, db=Depends(get_session)):
+async def get_user(id: str):
     """
     Get a user by ID.
 
@@ -146,7 +143,7 @@ async def get_user(id: str, db=Depends(get_session)):
     Returns:
         UserSerializer: The serialized user object.
     """
-    dao = UserDAO(db)
+    dao = UserDAO()
 
     # Log that we're attempting to retrieve a user with the provided ID.
     logger.info(f"Attempting to retrieve user with ID {id}")
@@ -169,7 +166,7 @@ async def get_user(id: str, db=Depends(get_session)):
 
 # API Route located at /api/v1/user/
 @router.post("/create", response_model=UserSerializer)
-async def create_user(user: UserSchema, db=Depends(get_session)):
+async def create_user(user: UserSchema):
     """
     Create a new user in the database.
 
@@ -179,7 +176,7 @@ async def create_user(user: UserSchema, db=Depends(get_session)):
     Returns:
         UserSerializer: A Pydantic model representing the newly created user.
     """
-    dao = UserDAO(db)
+    dao = UserDAO()
 
     # Extract values from the user model and log them for debugging purposes.
     values = user.dict()
@@ -212,7 +209,7 @@ async def create_user(user: UserSchema, db=Depends(get_session)):
 
 # API Route located at /api/v1/user/
 @router.put("/id/{id}", response_model=UserSerializer)
-async def update_user(id: str, user: UserUpdateSchema, db=Depends(get_session)):
+async def update_user(id: str, user: UserUpdateSchema):
     """
     Update a user in the database.
 
@@ -224,7 +221,7 @@ async def update_user(id: str, user: UserUpdateSchema, db=Depends(get_session)):
         UserSerializer: A Pydantic model representing the updated user.
     """
 
-    dao = UserDAO(db)
+    dao = UserDAO()
 
     # Attempt to retrieve the user from the database by ID.
     db_user = await dao.get_or_none(id=id)
@@ -249,7 +246,7 @@ async def update_user(id: str, user: UserUpdateSchema, db=Depends(get_session)):
 
 # API Route located at /api/v1/user/
 @router.delete("/id/{id}", response_model=bool)
-async def delete_user(id: str, db=Depends(get_session)):
+async def delete_user(id: str):
     """
     Delete a user from the database by ID.
 
@@ -259,7 +256,7 @@ async def delete_user(id: str, db=Depends(get_session)):
     Returns:
         bool: True if the user was deleted successfully, False otherwise.
     """
-    dao = UserDAO(db)
+    dao = UserDAO()
     # Attempt to retrieve the user from the database by ID.
     db_user = await dao.get_or_none(id=id)
 

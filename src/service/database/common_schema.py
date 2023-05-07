@@ -7,6 +7,8 @@ from sqlalchemy import Column, DateTime, String, desc, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 
+from service.database.db_session import _session_maker
+
 
 class BaseModel:
     """
@@ -25,10 +27,38 @@ class BaseModel:
     )
 
 
+import asyncio
+
+
+from fastapi_async_sqlalchemy.middleware import db 
+
+
+
 class BaseDAO:
-    def __init__(self, db, clazz):
-        self.db = db
+    def __init__(self, clazz):
+        self.__session = None
         self.clazz = clazz
+
+    # @classmethod
+    # async def make_session(self):
+    #     async with async_session() as db:
+    #         try:
+    #             yield db
+    #             await db.commit()
+    #         except Exception as e:
+    #             await db.rollback()
+    #         finally:
+    #             await db.close()
+
+    # async def get_session(self):
+    #     if not self.__session:
+    #         self.__session = await BaseDAO.make_session().__anext__()
+    #     return self.__session
+
+    # async def get_session(self):
+    #     if not self.__session:
+    #         self.__session = _session_maker()
+    #     return self.__session
 
     async def list_all(self, filters=None, order_by=None, limit=500, offset=0):
         """
@@ -46,6 +76,7 @@ class BaseDAO:
         Example:
             users = await User.list_all(filters={"name": "John"}, order_by="date_created:desc", limit=10, offset=20)
         """
+        db = await self.get_session()
         logger.debug(f"Listing all {self.clazz.__name__} objects")
         query = select(self.clazz)
 
@@ -74,8 +105,9 @@ class BaseDAO:
         if offset is not None:
             query = query.offset(offset)
 
-        instances = await self.db.execute(query)
+        instances = await db.execute(query)
         instances = instances.scalars().all()
+
         return instances
 
     async def count_all(self, filters=None):
@@ -91,6 +123,7 @@ class BaseDAO:
         Example:
             count = await User.count_all(filters={"name": "John"})
         """
+        db = await self.get_session()
         logger.debug(f"Counting all {self.clazz.__name__} objects")
         query = select(func.count(self.clazz.id))
 
@@ -104,7 +137,7 @@ class BaseDAO:
                 else:
                     query = query.where(getattr(self.clazz, key).like(f"%{value}%"))
 
-        count = await self.db.scalar(query)
+        count = await db.scalar(query)
         return count
 
     async def create(self, **kwargs):
@@ -123,9 +156,10 @@ class BaseDAO:
         Example:
             user = await User.create(name="John Doe", email="john@example.com")
         """
+        db = await self.get_session()
         logger.debug(f"Creating {self.clazz.__name__} with kwargs: {kwargs}")
         instance = self.clazz(id=str(uuid4()), **kwargs)
-        self.db.add(instance)
+        db.add(instance)
 
         return instance
 
@@ -142,9 +176,10 @@ class BaseDAO:
         Example:
             await User.delete("123e4567-e89b-12d3-a456-426614174000")
         """
+        db = await self.get_session()
         logger.debug(f"Deleting {self.clazz.__name__} with ID {id}")
         query = self.clazz.__table__.delete().where(self.clazz.id == id)
-        await self.db.execute(query)
+        await db.execute(query)
 
     async def update(self, id, **kwargs):
         """
@@ -160,6 +195,7 @@ class BaseDAO:
         Example:
             user = await User.update("123e4567-e89b-12d3-a456-426614174000", name="Jane Doe")
         """
+        db = await self.get_session()
         logger.debug(
             f"Updating {self.clazz.__name__} with ID {id} and kwargs: {kwargs}"
         )
@@ -173,7 +209,7 @@ class BaseDAO:
         # Check if row exists before updating
         instance = await self.clazz.get(id)
 
-        await self.db.execute(query, {"id": id, **kwargs})
+        await db.execute(query, {"id": id, **kwargs})
 
         return instance
 
@@ -190,8 +226,9 @@ class BaseDAO:
         Example:
             user = await User.get_id("123e4567-e89b-12d3-a456-426614174000")
         """
+        db = await self.get_session()
         logger.debug(f"Retrieving {self.clazz.__name__} with ID {id}")
         query = select(self.clazz).where(self.clazz.id == id)
-        instance = await self.db.execute(query)
+        instance = await db.execute(query)
         instance = instance.scalars().first()
         return instance

@@ -21,8 +21,7 @@ from sqlalchemy import text
 
 from sqlalchemy.orm import Session
 
-from service.database.db_session import get_session
-
+from service.database.common_schema import BaseDAO
 
 # Create an instance of APIRouter
 router = APIRouter()
@@ -120,7 +119,7 @@ async def health_main() -> HealthCheckResponseModel:
     response_class=ORJSONResponse,
     response_model=dict,
 )
-async def health_database(db: Session = Depends(get_session)) -> dict:
+async def health_database() -> dict:
     """
     Check the status of the database connection.
 
@@ -136,6 +135,8 @@ async def health_database(db: Session = Depends(get_session)) -> dict:
     """
     # Get the database driver from the config settings
     data_base_driver = config_settings.database_driver
+
+    db = BaseDAO.get_session().__anext__()
 
     try:
         # Retrieve database version using the db session

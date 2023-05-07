@@ -4,7 +4,6 @@ import time
 from loguru import logger
 
 from service.core.user_lib import encrypt_pass
-from service.database.db_session import get_session
 from service.database.user_schema import User
 from service.settings import config_settings
 
@@ -48,11 +47,10 @@ async def startup_events():
 
     if config_settings.create_demonstration_data:
         t0 = time.time()
-        async for session in get_session():
-            dao = UserDAO(session)
-            await dao.create_demo_user_data(
-                num_instances=config_settings.create_demonstration_quantity
-            )
+        dao = UserDAO()
+        await dao.create_demo_user_data(
+            num_instances=config_settings.create_demonstration_quantity
+        )
         t1 = f"It took {time.time() - t0:.2f} seconds to create demo data"
         print(t1)
         logger.warning(f"Demo data created in the database")
@@ -85,26 +83,25 @@ from service.database.user_schema import UserDAO
 
 async def create_default_user():
     # Check if there are any existing users in the database
-    async for session in get_session():
-        dao = UserDAO(session)
-        filters = {"is_admin": True}
-        existing_users = await dao.list_all(filters=filters)
-        if existing_users:
-            logger.warning(
-                "Default user creation aborted. User table already has existing data."
-            )
-            return
+    dao = UserDAO()
+    filters = {"is_admin": True}
+    existing_users = await dao.list_all(filters=filters)
+    if existing_users:
+        logger.warning(
+            "Default user creation aborted. User table already has existing data."
+        )
+        return
 
-        values: dict = {
-            "user_name": config_settings.admin_user_name,
-            "first_name": config_settings.admin_first_name,
-            "last_name": config_settings.admin_last_name,
-            "email": config_settings.admin_email.lower(),
-            "password": None,
-            "is_admin": True,
-        }
-        hash_pwd = encrypt_pass(config_settings.admin_password)
-        values["password"] = hash_pwd
+    values: dict = {
+        "user_name": config_settings.admin_user_name,
+        "first_name": config_settings.admin_first_name,
+        "last_name": config_settings.admin_last_name,
+        "email": config_settings.admin_email.lower(),
+        "password": None,
+        "is_admin": True,
+    }
+    hash_pwd = encrypt_pass(config_settings.admin_password)
+    values["password"] = hash_pwd
 
-        user = await dao.create(**values)
-        logger.debug(f"creating default user: {user}")
+    user = await dao.create(**values)
+    logger.debug(f"creating default user: {user}")
