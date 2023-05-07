@@ -27,7 +27,7 @@ class User(BaseModel, Base):
     """
 
     __tablename__ = "users"
-    
+
     user_name = Column(String(50), unique=True, index=True)
     first_name = Column(String(50))
     last_name = Column(String(50))
@@ -37,7 +37,6 @@ class User(BaseModel, Base):
     is_active = Column(Boolean, default=False, index=True)
     is_approved = Column(Boolean, default=False, index=True)
     is_admin = Column(Boolean, default=False, index=True)
-
 
     @hybrid_property
     def full_name(self):
