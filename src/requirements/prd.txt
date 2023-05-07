@@ -4,6 +4,7 @@ alembic==1.10.3 # Vulnerbilities: None
 asyncpg==0.27.0 # Vulnerbilities: None
 devsetgo-lib==0.10.1 # Vulnerbilities: None
 email-validator==2.0.0.post1 # From none | Vulnerbilities: None
+fastapi-async-sqlalchemy==0.4.1 # From none | Vulnerbilities: None
 fastapi[all]==0.95.1 # Vulnerbilities: None
 gunicorn==20.1.0 # Vulnerbilities: None
 passlib[bcrypt]==1.7.4 # Vulnerbilities: None

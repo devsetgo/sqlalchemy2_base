@@ -4,7 +4,8 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi_async_sqlalchemy.middleware import db
 from loguru import logger
 from sqlalchemy.exc import IntegrityError
 
@@ -55,7 +56,7 @@ async def get_all_users(
     Example:
         To retrieve all users with the first name "John" and the last name "Doe", make a GET request to "/?first_name=John&last_name=Doe".
     """
-    dao = UserDAO()
+
     # Create an empty dictionary to hold the filters
     filters = {}
 
@@ -103,6 +104,8 @@ async def get_all_users(
     if limit is None:
         limit = 500
 
+    dao = UserDAO(db.session)
+
     # Retrieve users based on the provided filters
     users = await dao.list_all(filters=filters, limit=limit, offset=offset)
 
@@ -143,10 +146,11 @@ async def get_user(id: str):
     Returns:
         UserSerializer: The serialized user object.
     """
-    dao = UserDAO()
 
     # Log that we're attempting to retrieve a user with the provided ID.
     logger.info(f"Attempting to retrieve user with ID {id}")
+
+    dao = UserDAO(db.session)
 
     # Retrieve the user from the database using the provided ID.
     user = await dao.get_id(id)
@@ -176,7 +180,7 @@ async def create_user(user: UserSchema):
     Returns:
         UserSerializer: A Pydantic model representing the newly created user.
     """
-    dao = UserDAO()
+    dao = UserDAO(db.session)
 
     # Extract values from the user model and log them for debugging purposes.
     values = user.dict()
@@ -221,7 +225,7 @@ async def update_user(id: str, user: UserUpdateSchema):
         UserSerializer: A Pydantic model representing the updated user.
     """
 
-    dao = UserDAO()
+    dao = UserDAO(db.session)
 
     # Attempt to retrieve the user from the database by ID.
     db_user = await dao.get_or_none(id=id)
@@ -256,7 +260,8 @@ async def delete_user(id: str):
     Returns:
         bool: True if the user was deleted successfully, False otherwise.
     """
-    dao = UserDAO()
+
+    dao = UserDAO(db.session)
     # Attempt to retrieve the user from the database by ID.
     db_user = await dao.get_or_none(id=id)
 

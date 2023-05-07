@@ -3,15 +3,13 @@ from uuid import uuid4
 
 from loguru import logger
 from sqlalchemy import Boolean, Column, String
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from service.core.demo_user_generator import demo_creator
-from service.database.common_schema import BaseModel, BaseDAO
-from service.database.db_session import Base
+from service.database.common_schema import BaseDAO, BaseModel
 
 
-class User(BaseModel, Base):
+class User(BaseModel):
     """
     This class represents a user in the database and inherits from BaseModel and Base.
 
@@ -53,13 +51,12 @@ class User(BaseModel, Base):
 
 
 class UserDAO(BaseDAO):
-    def __init__(self):
-        super().__init__(User)
+    def __init__(self, db):
+        super().__init__(User, db)
 
     async def create_demo_user_data(self, num_instances=100):
         from tqdm import tqdm
 
-        db = await self.get_session()
         # Check if there are any existing users in the database
         filters = {"is_admin": False}
         existing_users = await self.list_all(filters=filters)
@@ -71,7 +68,6 @@ class UserDAO(BaseDAO):
 
         demo_users = demo_creator(num_instances)
         for values in tqdm(demo_users):
-            db = BaseDAO.get_session()
             # Create a new instance of the cls class with the generated values
             instance = self.clazz(id=str(uuid4()), **values)
-            db.add(instance)
+            self.db.add(instance)

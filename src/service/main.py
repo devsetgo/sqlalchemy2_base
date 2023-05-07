@@ -10,7 +10,10 @@ from fastapi import FastAPI
 from service import resources
 from service.app_routes import add_routes
 from service.settings import config_settings
-from service.database.db_session import init_db
+
+
+from service.database.db_session import db_config
+from fastapi_async_sqlalchemy.middleware import SQLAlchemyMiddleware
 
 # Configure logging using dsg_lib.logging_config module
 logging_config.config_log(
@@ -37,7 +40,6 @@ async def lifespan(app: FastAPI):
         None: This function is used as an asynchronous context manager, so it yields control to the caller.
     """
     # Handle startup events
-    await init_db()
     await resources.startup_events()
     yield
     # Handle shutdown events
@@ -56,11 +58,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
-# @app.on_event("startup")
-# async def on_startup():
-#     logger.info("*** on_starup...")
-#     await init_db()
+app.add_middleware(
+    SQLAlchemyMiddleware,
+    db_url=db_config,
+    engine_args={  # engine arguments example
+        "echo": True,  # print all SQL statements
+        "pool_pre_ping": True,  # feature will normally emit SQL equivalent to “SELECT 1” each time a connection is checked out from the pool
+        "connect_args": {},
+    },
+    commit_on_exit=True,
+)
 
 
 # Add routes to the app instance
