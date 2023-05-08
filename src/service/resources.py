@@ -2,11 +2,17 @@
 import time
 
 from fastapi_async_sqlalchemy.middleware import db
+from fastapi_async_sqlalchemy.middleware import SQLAlchemyMiddleware
 from loguru import logger
 
 from service.core.user_lib import encrypt_pass
 from service.database.user_schema import User
 from service.settings import config_settings
+
+from fastapi_async_sqlalchemy.middleware import _Session
+
+
+from service.database.common_schema import BaseModel
 
 
 class DatabaseInitializationError(Exception):
@@ -23,13 +29,14 @@ async def startup_events():
 
     """
 
+    #TODO: Here I am trying to get the engine instnace from the global Session make and then create all the tables
     try:
-        # connect to database
-        # await db_session.db.init()
-        logger.info("Connecting to database")
-        # await db_session.db.create_all()
-        logger.info("Creating database tables")
-        logger.info("Connecting to database")
+        async with _Session():
+            engine = _Session.kw["bind"]
+            if engine:
+                logger.info("Creating database tables")
+                await BaseModel.metadata.create_all(engine, checkfirst=True)
+
     except Exception as ex:
         error: str = f"Error during database initialization and table creation {ex}"
         logger.critical(error)

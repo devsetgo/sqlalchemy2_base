@@ -10,8 +10,6 @@ from fastapi import FastAPI
 from service import resources
 from service.app_routes import add_routes
 from service.settings import config_settings
-
-
 from service.database.db_session import db_config
 from fastapi_async_sqlalchemy.middleware import SQLAlchemyMiddleware
 
